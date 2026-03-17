@@ -47,23 +47,29 @@ class LoginActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             LoginScreen(
-                onLoginSuccess = { userRole ->
-                    if (userRole == "admin") {
+                onLoginSuccess = { user: com.example.project.data.entities.User -> // <--- Đổi userRole thành user (đối tượng)
+                    if (user.role == "admin") {
+                        // Xử lý trang Admin ở đây nếu có
                     } else {
-                        startActivity(Intent(this, MainActivity::class.java))
+                        val intent = Intent(this, MainActivity::class.java)
+                        // GỬI EMAIL SANG MAIN ĐỂ HIỂN THỊ PROFILE
+                        intent.putExtra("USER_EMAIL", user.email)
+                        startActivity(intent)
                     }
                     finish()
                 },
                 onRegisterClick = {
-                    val intent = Intent(this@LoginActivity, RegisterActivity::class.java)
+                    val intent = Intent(this, RegisterActivity::class.java)
                     startActivity(intent)
                 }
             )
         }
     }
+    }
 
     @Composable
-    fun LoginScreen(onLoginSuccess: (String) -> Unit, onRegisterClick: () -> Unit) {
+    fun LoginScreen(onLoginSuccess: (com.example.project.data.entities.User) -> Unit, // Chỉ định rõ kiểu User
+                    onRegisterClick: () -> Unit) {
         var email by remember { mutableStateOf("") }
         var password by remember { mutableStateOf("") }
         val context = androidx.compose.ui.platform.LocalContext.current
@@ -168,19 +174,20 @@ class LoginActivity : ComponentActivity() {
             Spacer(modifier = Modifier.height(24.dp))
 
             // Nút Đăng nhập (Màu cam Primary)
+            // Nút Đăng nhập
             Button(
                 onClick = {
                     if (email.isEmpty() || password.isEmpty()) {
                         Toast.makeText(context, "Vui lòng nhập đủ!", Toast.LENGTH_SHORT).show()
                     } else {
                         CoroutineScope(Dispatchers.IO).launch {
-                            val user = db.userDao().login(email, password)
+                            val user = db.userDao().login(email.trim(), password.trim())
                             withContext(Dispatchers.Main) {
                                 if (user != null) {
-                                    onLoginSuccess(user.role)
+                                    // TRUYỀN NGUYÊN ĐỐI TƯỢNG USER LÊN ONCREAET
+                                    onLoginSuccess(user)
                                 } else {
-                                    Toast.makeText(context, "Sai tài khoản!", Toast.LENGTH_SHORT)
-                                        .show()
+                                    Toast.makeText(context, "Sai tài khoản!", Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }
@@ -202,4 +209,3 @@ class LoginActivity : ComponentActivity() {
             }
         }
     }
-}

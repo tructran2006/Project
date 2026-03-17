@@ -13,7 +13,7 @@ import com.example.project.data.entities.User
 
 @Database(
     entities = [User::class, Product::class, CartItem::class, Order::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
