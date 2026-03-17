@@ -55,7 +55,8 @@ class LoginActivity : ComponentActivity() {
                     finish()
                 },
                 onRegisterClick = {
-                    // startActivity(Intent(this, RegisterActivity::class.java))
+                    val intent = Intent(this@LoginActivity, RegisterActivity::class.java)
+                    startActivity(intent)
                 }
             )
         }
@@ -194,8 +195,6 @@ class LoginActivity : ComponentActivity() {
             {
                 Text(text = "Đăng nhập", color = Color.White, fontWeight = FontWeight.Bold)
             }
-
-            Spacer(modifier = Modifier.weight(1f))
 
             // Link Đăng ký
             TextButton(onClick = onRegisterClick) {

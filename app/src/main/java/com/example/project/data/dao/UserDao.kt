@@ -13,8 +13,8 @@ interface UserDao {
     suspend fun register(user: User)
 
     // Kiểm tra đăng nhập
-    @Query("SELECT * FROM user_table WHERE username = :user AND password = :pass LIMIT 1")
-    suspend fun login(user: String, pass: String): User?
+    @Query("SELECT * FROM user_table WHERE email = :email AND password = :password LIMIT 1")
+    suspend fun login(email: String, password: String): User?
 
     // Kiểm tra xem tên tài khoản đã tồn tại chưa
     @Query("SELECT * FROM user_table WHERE username = :user LIMIT 1")

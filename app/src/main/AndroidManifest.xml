@@ -22,6 +22,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-    </application>
 
+        <activity
+            android:name="com.example.project.gui.auth.RegisterActivity"
+            android:exported="false" />
+        <activity
+            android:name="com.example.project.MainActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+    </application>
 </manifest>
