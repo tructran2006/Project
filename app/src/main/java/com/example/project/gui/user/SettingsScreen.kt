@@ -1,5 +1,6 @@
 package com.example.project.gui.user
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -25,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.project.data.database.AppDatabase
+import com.example.project.gui.shop.AdminActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -117,6 +119,10 @@ fun SettingsScreen(
                         db.userDao().updateUserRole(userEmail, "admin")
                         withContext(Dispatchers.Main) {
                             Toast.makeText(context, "Chúc mừng! Bạn đã trở thành Shop", Toast.LENGTH_SHORT).show()
+
+                            // MỞ TRANG ADMIN NGAY LẬP TỨC
+                            val intent = Intent(context, AdminActivity::class.java)
+                            context.startActivity(intent)
                         }
                     }
                 },

@@ -4,15 +4,19 @@ import androidx.room.*
 import com.example.project.data.entities.Product
 import com.example.project.data.entities.CartItem
 import com.example.project.data.entities.Order
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ProductDao {
     // --- Lệnh cho Sản phẩm ---
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertProduct(product: Product)
 
+    @Delete
+    suspend fun deleteProduct(product: Product)
+
     @Query("SELECT * FROM product_table")
-    suspend fun getAllProducts(): List<Product>
+    fun getAllProducts(): Flow<List<Product>>
 
     @Query("SELECT * FROM product_table WHERE ownerId = :shopId")
     suspend fun getProductsByShop(shopId: Int): List<Product>
@@ -26,8 +30,6 @@ interface ProductDao {
 
     @Delete
     suspend fun removeFromCart(cartItem: CartItem)
-
-    // Thêm vào interface ProductDao hiện tại của bạn:
 
     @Query("UPDATE cart_table SET quantity = :qty WHERE cartId = :id")
     suspend fun updateCartQuantity(id: Int, qty: Int)

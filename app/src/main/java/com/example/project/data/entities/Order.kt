@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "order_table")
 data class Order(
     @PrimaryKey(autoGenerate = true)
-    val orderId: Int = 0,
+    val id: Int = 0,
     val userId: Int,
     val totalPrice: Double,
     val status: String = "Pending", // Pending, Processing, Shipped, Delivered

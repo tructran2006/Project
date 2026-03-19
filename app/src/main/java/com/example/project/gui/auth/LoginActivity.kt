@@ -40,6 +40,7 @@ import coil.request.ImageRequest
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import com.example.project.gui.shop.AdminActivity
 
 
 class LoginActivity : ComponentActivity() {
@@ -47,9 +48,10 @@ class LoginActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             LoginScreen(
-                onLoginSuccess = { user: com.example.project.data.entities.User -> // <--- Đổi userRole thành user (đối tượng)
+                onLoginSuccess = { user: com.example.project.data.entities.User ->
                     if (user.role == "admin") {
-                        // Xử lý trang Admin ở đây nếu có
+                        val intent = Intent(this@LoginActivity, AdminActivity::class.java)
+                        startActivity(intent)
                     } else {
                         val intent = Intent(this, MainActivity::class.java)
                         // GỬI EMAIL SANG MAIN ĐỂ HIỂN THỊ PROFILE
