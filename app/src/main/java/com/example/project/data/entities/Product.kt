@@ -11,5 +11,7 @@ data class Product(
     val category: String = "Khác",
     val description: String = "Sản phẩm chất lượng cao",
     val imageUrl: String = "",
-    val ownerId: Int = 0
+    val ownerId: Int = 0,
+    val ownerEmail: String
+
 )

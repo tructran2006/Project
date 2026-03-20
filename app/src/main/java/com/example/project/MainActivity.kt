@@ -1,6 +1,7 @@
 package com.example.project
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -144,10 +145,11 @@ fun MainAppScreen() {
 
                 "profile" -> {
                     ProfileScreen(
+                        db=db,
                         name = userName,
                         email = userEmail,
                         onNavigateToSettings = {
-                            currentTab = "settings" // Lệnh đổi tab
+                            currentTab = "settings"
                         }
                     )
                 }

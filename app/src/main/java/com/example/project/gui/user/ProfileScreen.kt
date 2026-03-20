@@ -23,13 +23,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.project.data.database.AppDatabase
 import com.example.project.gui.auth.LoginActivity // Import đúng đường dẫn Login của bạn
+import com.google.android.gms.cast.framework.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun ProfileScreen(name: String, email: String,onNavigateToSettings: () -> Unit) {
+fun ProfileScreen(db: AppDatabase,name: String, email: String,onNavigateToSettings: () -> Unit) {
     val primaryColor = Color(0xFFF48C25)
     val bgColor = Color(0xFFF8F7F5)
     val context = LocalContext.current

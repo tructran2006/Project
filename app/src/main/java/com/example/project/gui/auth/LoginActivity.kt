@@ -49,15 +49,11 @@ class LoginActivity : ComponentActivity() {
         setContent {
             LoginScreen(
                 onLoginSuccess = { user: com.example.project.data.entities.User ->
-                    if (user.role == "admin") {
-                        val intent = Intent(this@LoginActivity, AdminActivity::class.java)
-                        startActivity(intent)
-                    } else {
                         val intent = Intent(this, MainActivity::class.java)
-                        // GỬI EMAIL SANG MAIN ĐỂ HIỂN THỊ PROFILE
+
                         intent.putExtra("USER_EMAIL", user.email)
                         startActivity(intent)
-                    }
+
                     finish()
                 },
                 onRegisterClick = {
