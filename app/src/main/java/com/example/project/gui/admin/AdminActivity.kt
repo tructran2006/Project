@@ -1,5 +1,6 @@
-package com.example.project.gui.shop
+package com.example.project.gui.admin
 
+import android.R.attr.description
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -27,14 +28,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.project.data.database.AppDatabase
 import com.example.project.data.entities.Category
+import com.example.project.data.entities.Order
 import com.example.project.data.entities.Product
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.collections.emptyList
-
-
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.text.style.TextOverflow
 class AdminActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,78 +59,91 @@ fun Context.findActivity(): Activity? {
 fun AdminScreen() {
     val context = LocalContext.current
     val db = remember { AppDatabase.getDatabase(context) }
-    var selectedTab by remember { mutableIntStateOf(0) }
-
-    // Lấy Activity để lấy Email từ Intent và xử lý nút Back
     val activity = context.findActivity()
-    val adminEmail = activity?.intent?.getStringExtra("ADMIN_EMAIL") ?: ""
-    val tabs = listOf("Sản phẩm", "Danh mục", "Đơn hàng")
+
+    // Lấy thông tin từ Intent (Gửi từ Login hoặc Settings)
+    val userEmail = activity?.intent?.getStringExtra("USER_EMAIL") ?: ""
+    val userRole = activity?.intent?.getStringExtra("USER_ROLE") ?: "shop"
+
+    // Định nghĩa Tab dựa trên Role
+    val tabs = if (userRole == "admin") listOf("Danh mục", "Đơn hệ thống")
+    else listOf("Sản phẩm của tôi", "Đơn khách đặt")
+
+    var selectedTab by remember { mutableIntStateOf(0) }
 
     Scaffold(
         topBar = {
             Column {
                 CenterAlignedTopAppBar(
-                    title = { Text("Trang Quản Trị", fontWeight = FontWeight.Bold) },
+                    title = {
+                        Text(
+                            if (userRole == "admin") "Hệ Thống Quản Trị" else "Kênh Người Bán",
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
                     navigationIcon = {
-                        IconButton(onClick = {
-                            val intent = Intent(context, com.example.project.gui.auth.LoginActivity::class.java)
-
-                            intent.putExtra("USER_EMAIL", adminEmail)
-
-                            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                            context.startActivity(intent)
-                            activity?.finish()
-                        }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Quay lại")
+                        IconButton(onClick = { activity?.finish() }) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                         }
-                    }
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = Color.White
+                    )
                 )
-                TabRow(selectedTabIndex = selectedTab, containerColor = Color.White) {
+                TabRow(selectedTabIndex = selectedTab, containerColor = Color.White, contentColor = Color(0xFFF48C25)) {
                     tabs.forEachIndexed { index, title ->
                         Tab(
                             selected = selectedTab == index,
                             onClick = { selectedTab = index },
-                            text = { Text(title) }
+                            text = { Text(title, fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal) }
                         )
                     }
                 }
             }
         }
     ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
-            when (selectedTab) {
-                // TRUYỀN adminEmail vào các Manager
-                0 -> ProductManager(db, adminEmail)
-                1 -> CategoryManager(db)
-                2 -> OrderManager(db)
+        Box(modifier = Modifier.padding(innerPadding).fillMaxSize().background(Color(0xFFF8F7F5))) {
+            if (userRole == "admin") {
+                when (selectedTab) {
+                    0 -> CategoryManager(db)
+                    1 -> OrderManager(db, userEmail, isAdmin = true)
+                }
+            } else {
+                when (selectedTab) {
+                    0 -> ProductManager(db, userEmail)
+                    1 -> OrderManager(db, userEmail, isAdmin = false)
+                }
             }
         }
     }
 }
 
 @Composable
-fun ProductManager(db: AppDatabase, adminEmail: String) {
-    // 1. Gọi đúng hàm lọc theo Email đã sửa ở Dao trên
-    val productList by db.productDao().getProductsByOwnerFlow(adminEmail).collectAsState(initial = emptyList())
-
+fun ProductManager(db: AppDatabase, shopEmail: String) {
+    val productList by db.productDao().getProductsByOwnerFlow(shopEmail).collectAsState(initial = emptyList())
     var showAddDialog by remember { mutableStateOf(false) }
-
-    // 2. CHỈ ĐỊNH RÕ KIỂU DỮ LIỆU <Product?> ĐỂ HẾT LỖI "Cannot infer type"
     var editingProduct by remember { mutableStateOf<Product?>(null) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            items(productList) { product ->
-                AdminProductItem(
-                    product = product,
-                    onEdit = {
-                        // Gán nguyên đối tượng product vào state
-                        editingProduct = product
-                    },
-                    onDelete = {
-                        CoroutineScope(Dispatchers.IO).launch { db.productDao().deleteProduct(product) }
-                    }
-                )
+        if (productList.isEmpty()) {
+            Column(
+                modifier = Modifier.align(Alignment.Center),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(Icons.Default.Inventory, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.LightGray)
+                Text("Bạn chưa đăng sản phẩm nào", color = Color.Gray)
+            }
+        } else {
+            LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                items(productList) { product ->
+                    AdminProductItem(
+                        product = product,
+                        onEdit = { editingProduct = product },
+                        onDelete = {
+                            CoroutineScope(Dispatchers.IO).launch { db.productDao().deleteProduct(product) }
+                        }
+                    )
+                }
             }
         }
 
@@ -140,18 +154,100 @@ fun ProductManager(db: AppDatabase, adminEmail: String) {
         ) { Icon(Icons.Default.Add, contentDescription = null, tint = Color.White) }
     }
 
-    // Dialog Thêm
     if (showAddDialog) {
-        AddProductWithImageDialog(db = db, adminEmail = adminEmail, onDismiss = { showAddDialog = false })
+        AddProductWithImageDialog(db = db, adminEmail = shopEmail, onDismiss = { showAddDialog = false })
     }
 
-    // Dialog Sửa (Chỉ hiện khi editingProduct khác null)
     editingProduct?.let { product ->
-        EditProductDialog(
-            db = db,
-            product = product,
-            onDismiss = { editingProduct = null }
-        )
+        EditProductDialog(db = db, product = product, onDismiss = { editingProduct = null })
+    }
+}
+
+@Composable
+fun OrderManager(db: AppDatabase, email: String, isAdmin: Boolean) {
+    // Nếu là Admin thì xem hết, nếu là Shop thì chỉ xem đơn hàng có shopEmail của mình
+    val orderList by (if (isAdmin) db.productDao().getAllOrdersFlow()
+    else db.productDao().getOrdersForShopFlow(email))
+        .collectAsState(initial = emptyList())
+
+    if (orderList.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Chưa có đơn hàng nào", color = Color.Gray)
+        }
+    } else {
+        LazyColumn(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+            items(orderList) { order ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    elevation = CardDefaults.cardElevation(2.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Mã đơn: #${order.id}", fontWeight = FontWeight.Bold)
+                            Text(
+                                order.status,
+                                color = if (order.status == "Pending") Color.Red else Color(0xFF4CAF50),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("🛒 ${order.productDescription}", fontSize = 14.sp, color = Color.DarkGray)
+
+                        if (!order.note.isNullOrBlank()) {
+                            Surface(
+                                color = Color(0xFFF1F5F9),
+                                shape = RoundedCornerShape(4.dp),
+                                modifier = Modifier.padding(top = 8.dp).fillMaxWidth()
+                            ) {
+                                Text(
+                                    "Ghi chú: ${order.note}",
+                                    modifier = Modifier.padding(8.dp),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Tổng tiền: ${String.format("%,.0f", order.totalPrice)}đ",
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFFF48C25),
+                            fontSize = 16.sp
+                        )
+
+                        Divider(modifier = Modifier.padding(vertical = 12.dp))
+
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            if (order.status == "Pending") {
+                                Button(
+                                    onClick = {
+                                        CoroutineScope(Dispatchers.IO).launch {
+                                            db.productDao().updateOrderStatus(order.id, "Processing")
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6))
+                                ) { Text("Duyệt đơn", fontSize = 11.sp) }
+                            }
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            if (order.status != "Completed") {
+                                Button(
+                                    onClick = {
+                                        CoroutineScope(Dispatchers.IO).launch {
+                                            db.productDao().updateOrderStatus(order.id, "Completed")
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
+                                ) { Text("Hoàn thành", fontSize = 11.sp) }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -162,10 +258,11 @@ fun AddProductWithImageDialog(db: AppDatabase, adminEmail: String, onDismiss: ()
     var name by remember { mutableStateOf("") }
     var price by remember { mutableStateOf("") }
     var imgUrl by remember { mutableStateOf("") }
-
-    val categoryList by db.categoryDao().getAllCategories().collectAsState(initial = emptyList())
     var selectedCategory by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
+    var description by remember { mutableStateOf("") }
+
+    val categoryList by db.categoryDao().getAllCategories().collectAsState(initial = emptyList())
 
     LaunchedEffect(categoryList) {
         if (categoryList.isNotEmpty() && selectedCategory.isEmpty()) {
@@ -175,63 +272,48 @@ fun AddProductWithImageDialog(db: AppDatabase, adminEmail: String, onDismiss: ()
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Thêm sản phẩm mới", fontWeight = FontWeight.Bold) },
+        title = { Text("Thêm sản phẩm", fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Tên sản phẩm") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(
-                    value = price,
-                    onValueChange = { if (it.all { char -> char.isDigit() }) price = it },
-                    label = { Text("Giá tiền (VNĐ)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                OutlinedTextField(value = price, onValueChange = { if (it.all { c -> c.isDigit() }) price = it }, label = { Text("Giá tiền") }, modifier = Modifier.fillMaxWidth())
 
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-                        OutlinedTextField(
-                            value = if (selectedCategory.isEmpty()) "Chọn danh mục" else selectedCategory,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Danh mục") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth()
-                        )
-                        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                            categoryList.forEach { cat ->
-                                DropdownMenuItem(text = { Text(cat.name) }, onClick = { selectedCategory = cat.name; expanded = false })
-                            }
+                ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+                    OutlinedTextField(
+                        value = selectedCategory, onValueChange = {}, readOnly = true,
+                        label = { Text("Danh mục") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        categoryList.forEach { cat ->
+                            DropdownMenuItem(text = { Text(cat.name) }, onClick = { selectedCategory = cat.name; expanded = false })
                         }
                     }
                 }
-                OutlinedTextField(value = imgUrl, onValueChange = { imgUrl = it }, label = { Text("Link ảnh (URL)") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = imgUrl, onValueChange = { imgUrl = it }, label = { Text("Link ảnh") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Mô tả sản phẩm") },
+                    modifier = Modifier.fillMaxWidth().height(100.dp),
+                    maxLines = 3
+                )
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    val priceDouble = price.toDoubleOrNull() ?: 0.0
-                    if (name.isBlank() || price.isBlank() || selectedCategory.isBlank()) {
-                        Toast.makeText(context, "Vui lòng nhập đủ thông tin!", Toast.LENGTH_SHORT).show()
-                    } else {
-                        CoroutineScope(Dispatchers.IO).launch {
-                            val p = Product(
-                                name = name,
-                                price = priceDouble,
-                                category = selectedCategory,
-                                imageUrl = imgUrl,
-                                ownerEmail = adminEmail // QUAN TRỌNG: Lưu email chủ shop
-                            )
-                            db.productDao().insertProduct(p)
-                            withContext(Dispatchers.Main) { onDismiss() }
-                        }
+            Button(onClick = {
+                val pDouble = price.toDoubleOrNull() ?: 0.0
+                if (name.isNotBlank() && price.isNotBlank()) {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        db.productDao().insertProduct(Product(name = name, price = pDouble, category = selectedCategory, imageUrl = imgUrl, ownerEmail = adminEmail,description = description))
+                        withContext(Dispatchers.Main) { onDismiss() }
                     }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF48C25))
-            ) { Text("Lưu") }
+                }
+            }) { Text("Lưu") }
         }
     )
 }
-
 @Composable
 fun CategoryManager(db: AppDatabase) {
     val categoryList by db.categoryDao().getAllCategories().collectAsState(initial = emptyList())
@@ -348,35 +430,6 @@ fun CategoryManager(db: AppDatabase) {
     }
 }
 
-@Composable
-fun OrderManager(db: AppDatabase) {
-    // Giả sử bạn đã có bảng Order trong Database
-    val orderList by db.orderDao().getAllOrders().collectAsState(initial = emptyList())
-
-    LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        items(orderList) { order ->
-            Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Đơn hàng #${order.id}", fontWeight = FontWeight.Bold)
-                    Text("Tổng tiền: ${order.totalPrice}đ")
-                    Text("Trạng thái hiện tại: ${order.status}", color = Color(0xFFF48C25))
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = {
-                            updateStatus(db, order.id, "Đang giao")
-                        }) { Text("Giao hàng", fontSize = 10.sp) }
-
-                        Button(onClick = {
-                            updateStatus(db, order.id, "Hoàn thành")
-                        }, colors = ButtonDefaults.buttonColors(containerColor = Color.Green)) {
-                            Text("Hoàn thành", fontSize = 10.sp)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 fun updateStatus(db: AppDatabase, orderId: Int, newStatus: String) {
     CoroutineScope(Dispatchers.IO).launch {
@@ -385,6 +438,7 @@ fun updateStatus(db: AppDatabase, orderId: Int, newStatus: String) {
 }
 @Composable
 fun AdminProductItem(product: Product, onEdit: () -> Unit, onDelete: () -> Unit) {
+    var isExpanded by remember { mutableStateOf(false) }
     Card(
         modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -398,7 +452,6 @@ fun AdminProductItem(product: Product, onEdit: () -> Unit, onDelete: () -> Unit)
                 modifier = Modifier.size(60.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFFF1F5F9)),
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop
             )
-
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {

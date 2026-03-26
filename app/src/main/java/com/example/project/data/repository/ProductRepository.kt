@@ -1,23 +1,37 @@
 package com.example.project.data.repository
 
 import com.example.project.data.dao.ProductDao
-import com.example.project.data.entities.Product
 import com.example.project.data.entities.CartItem
 import com.example.project.data.entities.Order
+import com.example.project.data.entities.Product
+import kotlinx.coroutines.flow.Flow
 
 class ProductRepository(private val productDao: ProductDao) {
-    // Sản phẩm
-    suspend fun getAllProducts() = productDao.getAllProducts()
+
+    // Lấy tất cả sản phẩm (Cho trang chủ)
+    fun getAllProducts() = productDao.getAllProducts()
+
+    // Lấy sản phẩm của Shop
+    fun getProductsByShop(email: String) = productDao.getProductsByOwnerFlow(email)
+
     suspend fun insertProduct(product: Product) = productDao.insertProduct(product)
+    suspend fun updateProduct(product: Product) = productDao.updateProduct(product)
+    suspend fun deleteProduct(product: Product) = productDao.deleteProduct(product)
 
     // Giỏ hàng
+    fun getCartFlow(userId: Int) = productDao.getCartFlow(userId)
     suspend fun addToCart(item: CartItem) = productDao.addToCart(item)
-    suspend fun getCart(userId: Int) = productDao.getCartByUser(userId)
-    suspend fun updateCart(id: Int, qty: Int) = productDao.updateCartQuantity(id, qty)
+    suspend fun clearCart(userId: Int) = productDao.clearCart(userId)
 
-    // Thanh toán
-    suspend fun checkout(order: Order) {
-        productDao.createOrder( order)
-        productDao.clearCart(order.userId) // Thanh toán xong thì xóa giỏ hàng
-    }
+    // Đơn hàng
+    suspend fun createOrder(order: Order) = productDao.createOrder(order)
+
+    fun getOrdersForShop(email: String) = productDao.getOrdersForShopFlow(email)
+
+    fun getAllOrdersForAdmin() = productDao.getAllOrdersFlow()
+
+    suspend fun updateOrderStatus(orderId: Int, status: String) =
+        productDao.updateOrderStatus(orderId, status)
+
+    fun searchProducts(query: String) = productDao.searchProducts(query)
 }

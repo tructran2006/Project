@@ -50,7 +50,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    
+
     // Room
     implementation(libs.androidx.room.runtime)
     kapt(libs.androidx.room.compiler)
@@ -71,7 +71,7 @@ dependencies {
     // Image Loading
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation("io.coil-kt:coil-gif:2.6.0")
-    
+
     // UI Extras
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.constraintlayout:constraintlayout-compose:1.1.0")

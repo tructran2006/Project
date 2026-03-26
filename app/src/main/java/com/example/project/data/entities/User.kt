@@ -13,5 +13,7 @@ data class User(
     val role: String = "user",
     val birthday: String? = "Chưa cập nhật",
     val age: Int? = 0,
-    val address: String? = "Chưa cập nhật"
+    val address: String? = "Chưa cập nhật",
+    val phone: String? = "",
+    val avatarUri: String? = null
 )

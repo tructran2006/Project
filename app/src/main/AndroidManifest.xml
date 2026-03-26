@@ -31,7 +31,7 @@
             android:exported="false"
             android:screenOrientation="portrait" />
         <activity
-            android:name="com.example.project.gui.shop.AdminActivity"
+            android:name="com.example.project.gui.admin.AdminActivity"
             android:exported="false"
             android:label="Quản lý cửa hàng"
             android:screenOrientation="portrait" />

@@ -4,20 +4,31 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.example.project.data.dao.CategoryDao
-import com.example.project.data.dao.OrderDao
-import com.example.project.data.dao.ProductDao
-import com.example.project.data.dao.UserDao
-import com.example.project.data.entities.CartItem
+
+import com.example.project.data.entities.User
+import com.example.project.data.entities.Product
 import com.example.project.data.entities.Category
 import com.example.project.data.entities.Order
-import com.example.project.data.entities.Product
-import com.example.project.data.entities.User
+import com.example.project.data.entities.CartItem
 
-@Database(entities = [User::class, Product::class, Category::class, Order::class, CartItem::class],
-    version = 8,
-    exportSchema = false)
+import com.example.project.data.dao.UserDao
+import com.example.project.data.dao.ProductDao
+import com.example.project.data.dao.CategoryDao
+import com.example.project.data.dao.OrderDao
+
+@Database(
+    entities = [
+        User::class,
+        Product::class,
+        Category::class,
+        Order::class,
+        CartItem::class
+    ],
+    version = 10,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
+
     abstract fun userDao(): UserDao
     abstract fun productDao(): ProductDao
     abstract fun categoryDao(): CategoryDao
@@ -33,7 +44,8 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "shop_database"
-                ).fallbackToDestructiveMigration()
+                )
+                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance

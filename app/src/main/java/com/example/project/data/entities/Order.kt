@@ -5,10 +5,12 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "order_table")
 data class Order(
-    @PrimaryKey(autoGenerate = true)
-    val id: Int = 0,
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val userId: Int,
+    val shopEmail: String,        // Kiểm tra xem đã có dòng này chưa
+    val productDescription: String, // Kiểm tra xem đã có dòng này chưa
     val totalPrice: Double,
-    val status: String = "Pending", // Pending, Processing, Shipped, Delivered
+    val status: String = "Pending",
+    val note: String? = "",         // Kiểm tra xem đã có dòng này chưa
     val timestamp: Long = System.currentTimeMillis()
 )
