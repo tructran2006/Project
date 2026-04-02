@@ -189,6 +189,7 @@ fun MainAppScreen() {
     }
 }
 
+//Hiển thị lời chào thay đổi theo thời gian
 @Composable
 fun HeaderSection(primary: Color, onCartClick: () -> Unit) {
     val calendar = Calendar.getInstance()
@@ -264,6 +265,7 @@ fun HomeTab(
     }
 }
 
+//Thanh tìm kiếm sản phẩm
 @Composable
 fun CategorySection(
     primary: Color,
@@ -334,6 +336,7 @@ fun SearchBarSection(
     )
 }
 
+//Hiển thị các banner quảng cáo
 @Composable
 fun PromoCarousel() {
     LazyRow(
@@ -395,6 +398,7 @@ fun CategoryItem(name: String, icon: ImageVector, bg: Color, tint: Color) {
     }
 }
 
+//Danh mục
 @Composable
 fun CategoryScreen(primary: Color, initialCategory: String) {
     val context = LocalContext.current
@@ -474,6 +478,8 @@ fun CategoryProductCard(product: Product, primary: Color) {
     }
 }
 
+
+//Mục Yêu thích
 @Composable
 fun FavoriteScreen(primary: Color) {
 
@@ -532,6 +538,7 @@ fun FavoriteScreen(primary: Color) {
         }
     }
 }
+
 
 @Composable
 fun FavoriteProductCard(
@@ -595,6 +602,7 @@ fun FavoriteProductCard(
     }
 }
 
+//Mục Giỏ hàng
 @Composable
 fun CartScreen(
     primary: Color,
@@ -798,6 +806,8 @@ fun CartProductItem(
     }
 }
 
+
+//Thanh toán
 @Composable
 fun CheckoutScreen(
     primary: Color,
@@ -1314,24 +1324,13 @@ fun CheckoutScreen(
 }
 
 
-@Composable
-fun PriceRow(label: String, value: String, color: Color = Color.Black, isBold: Boolean = false) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(label, color = Color.Gray)
-        Text(value, color = color, fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal)
-    }
-}
 
+//Hiển thị sản phẩm
 @Composable
 fun AllProductsSection(
     primary: Color,
     db: AppDatabase,
-    searchQuery: String, // THÊM DÒNG NÀY
+    searchQuery: String,
     onProductClick: (Product) -> Unit
 ) {
     val allProducts by db.productDao().getAllProducts().collectAsState(initial = emptyList())
@@ -1381,6 +1380,7 @@ fun AllProductsSection(
     }
 }
 
+//Thẻ hiển thị sản phẩm nhỏ gọn với nút "Thêm vào giỏ" nhanh và nút "Yêu thích"
 @Composable
 fun ProductCard(product: Product, primary: Color, modifier: Modifier, onClick: () -> Unit) {
     val context = LocalContext.current
@@ -1463,6 +1463,7 @@ fun ProductCard(product: Product, primary: Color, modifier: Modifier, onClick: (
     }
 }
 
+//chi tiết sản phẩm
 @Composable
 fun ProductDetailDialog(product: Product, onDismiss: () -> Unit, primary: Color) {
     AlertDialog(
@@ -1501,6 +1502,7 @@ fun ProductDetailDialog(product: Product, onDismiss: () -> Unit, primary: Color)
     )
 }
 
+//Thanh điều hướng dưới cùng giúp chuyển đổi nhanh giữa 5 mục chính
 @Composable
 fun BottomNavigationBar(primaryColor: Color, currentTab: String, onTabClick: (String) -> Unit) {
     NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
