@@ -540,6 +540,8 @@ fun FavoriteScreen(primary: Color) {
 }
 
 
+// Card hiển thị sản phẩm trong mục yêu thích
+// Dùng lại dữ liệu thật từ Product để đảm bảo ảnh, tên, giá đồng bộ với trang chủ
 @Composable
 fun FavoriteProductCard(
     product: Product,
@@ -558,16 +560,22 @@ fun FavoriteProductCard(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
+            // Hiển thị ảnh sản phẩm từ đường link imageUrl
+            // Nếu link rỗng thì dùng ảnh placeholder mặc định
+            AsyncImage(
+                model = if (product.imageUrl.isNotBlank()) product.imageUrl else "https://via.placeholder.com/150",
+                contentDescription = product.name,
                 modifier = Modifier
                     .size(80.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFE0F2FE))
+                    .background(Color(0xFFE0F2FE)),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop
             )
 
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
+                // Tên sản phẩm
                 Text(
                     text = product.name,
                     fontWeight = FontWeight.Bold,
@@ -576,6 +584,7 @@ fun FavoriteProductCard(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
+                // Danh mục sản phẩm
                 Text(
                     text = product.category,
                     color = Color.Gray,
@@ -584,17 +593,19 @@ fun FavoriteProductCard(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
+                // Giá sản phẩm
                 Text(
-                    text = "${product.price.toInt()} đ",
+                    text = formatPrice(product.price),
                     color = primary,
                     fontWeight = FontWeight.Bold
                 )
             }
 
+            // Nút bỏ khỏi yêu thích
             IconButton(onClick = onRemove) {
                 Icon(
                     imageVector = Icons.Default.Favorite,
-                    contentDescription = null,
+                    contentDescription = "Bỏ yêu thích",
                     tint = Color.Red
                 )
             }
