@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.project.formatPrice
 import com.example.project.ui.viewmodel.ShopViewModel
 
 @Composable
@@ -62,6 +63,15 @@ fun ShopDashboardScreen(shopEmail: String, viewModel: ShopViewModel) {
     }
 }
 
+fun mapStatusToVietnamese(status: String): Pair<String, Color> {
+    return when (status) {
+        "Pending" -> "Chờ xác nhận" to Color(0xFFF48C25) // Cam
+        "Shipping" -> "Đang giao hàng" to Color(0xFF2196F3) // Xanh dương
+        "Delivered" -> "Hoàn tất" to Color(0xFF4CAF50) // Xanh lá
+        "Cancelled" -> "Đã hủy" to Color(0xFFE53935) // Đỏ
+        else -> status to Color.Gray
+    }
+}
 @Composable
 fun ShopOrderList(shopEmail: String, viewModel: ShopViewModel) {
     val orders by viewModel.getShopOrders(shopEmail).collectAsState(initial = emptyList())
@@ -73,29 +83,58 @@ fun ShopOrderList(shopEmail: String, viewModel: ShopViewModel) {
     } else {
         LazyColumn(modifier = Modifier.fillMaxSize().padding(8.dp)) {
             items(orders) { order ->
+                val (statusText, statusColor) = mapStatusToVietnamese(order.status)
+
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(8.dp),
-                    elevation = CardDefaults.cardElevation(4.dp)
+                    elevation = CardDefaults.cardElevation(4.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Đơn hàng #${order.id}", fontWeight = FontWeight.Bold)
-                        Text("Mô tả: ${order.productDescription}", color = Color.Gray)
-                        Text("Tổng: ${order.totalPrice.toInt()}đ", fontWeight = FontWeight.Bold)
-                        Text("Trạng thái: ${order.status}", color = Color.Blue)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Đơn hàng #${order.id}", fontWeight = FontWeight.Bold)
+                            // HIỂN THỊ TIẾNG VIỆT
+                            Text(statusText, color = statusColor, fontWeight = FontWeight.Bold)
+                        }
+
+                        Text("Mô tả: ${order.productDescription}", color = Color.Gray, fontSize = 13.sp)
+                        Text("Tổng tiền: ${formatPrice(order.totalPrice)}", fontWeight = FontWeight.Bold, color = Color(0xFFE53935))
 
                         if (!order.note.isNullOrBlank()) {
                             Text("Ghi chú: ${order.note}", style = MaterialTheme.typography.bodySmall)
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                        // Nút xác nhận đơn
-                        Button(
-                            onClick = { viewModel.updateStatus(order.id, "Delivered") },
-                            enabled = order.status != "Delivered",
-                            modifier = Modifier.align(Alignment.End)
-                        ) {
-                            Text(if (order.status == "Delivered") "Đã giao" else "Xác nhận giao")
+                        // KHU VỰC CÁC NÚT BẤM TRẠNG THÁI
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+
+                            // Nút Hủy (Chỉ hiện khi đang Pending)
+                            if (order.status == "Pending") {
+                                androidx.compose.material3.TextButton(
+                                    onClick = { viewModel.updateStatus(order.id, "Cancelled") },
+                                    modifier = Modifier.padding(end = 8.dp)
+                                ) {
+                                    Text("Hủy đơn", color = Color.Red)
+                                }
+
+                                Button(
+                                    onClick = { viewModel.updateStatus(order.id, "Shipping") },
+                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
+                                ) {
+                                    Text("Giao hàng")
+                                }
+                            }
+
+                            // Nút Hoàn tất (Chỉ hiện khi đang Shipping)
+                            if (order.status == "Shipping") {
+                                Button(
+                                    onClick = { viewModel.updateStatus(order.id, "Delivered") },
+                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                                ) {
+                                    Text("Hoàn tất đơn")
+                                }
+                            }
                         }
                     }
                 }

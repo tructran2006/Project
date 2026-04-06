@@ -36,6 +36,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.text.style.TextOverflow
+import com.example.project.formatPrice
+
 class AdminActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -163,9 +165,18 @@ fun ProductManager(db: AppDatabase, shopEmail: String) {
     }
 }
 
+fun mapStatusToVietnamese(status: String): Pair<String, Color> {
+    return when (status) {
+        "Pending" -> "Chờ xác nhận" to Color(0xFFF48C25) // Cam
+        "Processing" -> "Đang chuẩn bị" to Color(0xFF3B82F6) // Xanh dương
+        "Shipping" -> "Đang giao hàng" to Color(0xFF2196F3) // Xanh da trời
+        "Completed" -> "Hoàn tất" to Color(0xFF4CAF50) // Xanh lá
+        "Cancelled" -> "Đã hủy" to Color(0xFFE53935) // Đỏ
+        else -> status to Color.Gray
+    }
+}
 @Composable
 fun OrderManager(db: AppDatabase, email: String, isAdmin: Boolean) {
-    // Nếu là Admin thì xem hết, nếu là Shop thì chỉ xem đơn hàng có shopEmail của mình
     val orderList by (if (isAdmin) db.productDao().getAllOrdersFlow()
     else db.productDao().getOrdersForShopFlow(email))
         .collectAsState(initial = emptyList())
@@ -177,6 +188,8 @@ fun OrderManager(db: AppDatabase, email: String, isAdmin: Boolean) {
     } else {
         LazyColumn(modifier = Modifier.fillMaxSize().padding(12.dp)) {
             items(orderList) { order ->
+                val (statusText, statusColor) = mapStatusToVietnamese(order.status)
+
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                     elevation = CardDefaults.cardElevation(2.dp),
@@ -185,65 +198,83 @@ fun OrderManager(db: AppDatabase, email: String, isAdmin: Boolean) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Mã đơn: #${order.id}", fontWeight = FontWeight.Bold)
-                            Text(
-                                order.status,
-                                color = if (order.status == "Pending") Color.Red else Color(0xFF4CAF50),
-                                fontWeight = FontWeight.Bold
-                            )
+                            // HIỂN THỊ TIẾNG VIỆT
+                            Text(statusText, color = statusColor, fontWeight = FontWeight.Bold)
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
                         Text("🛒 ${order.productDescription}", fontSize = 14.sp, color = Color.DarkGray)
+                        Text("Tổng tiền: ${formatPrice(order.totalPrice)}", fontWeight = FontWeight.Bold, color = Color(0xFFF48C25))
 
-                        if (!order.note.isNullOrBlank()) {
-                            Surface(
-                                color = Color(0xFFF1F5F9),
-                                shape = RoundedCornerShape(4.dp),
-                                modifier = Modifier.padding(top = 8.dp).fillMaxWidth()
-                            ) {
-                                Text(
-                                    "Ghi chú: ${order.note}",
-                                    modifier = Modifier.padding(8.dp),
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                        }
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp)
 
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "Tổng tiền: ${String.format("%,.0f", order.totalPrice)}đ",
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFFF48C25),
-                            fontSize = 16.sp
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val scope = rememberCoroutineScope()
 
-                        Divider(modifier = Modifier.padding(vertical = 12.dp))
-
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                            if (order.status == "Pending") {
+                            // 1. Nút Hủy đơn (Có nền đỏ - Hiện khi đơn chưa hoàn thành và chưa bị hủy)
+                            if (order.status != "Completed" && order.status != "Cancelled") {
                                 Button(
                                     onClick = {
-                                        CoroutineScope(Dispatchers.IO).launch {
-                                            db.productDao().updateOrderStatus(order.id, "Processing")
-                                        }
+                                        scope.launch(Dispatchers.IO) { db.productDao().updateOrderStatus(order.id, "Cancelled") }
                                     },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6))
-                                ) { Text("Duyệt đơn", fontSize = 11.sp) }
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935)),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.height(36.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp)
+                                ) {
+                                    Text("Hủy đơn", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
 
                             Spacer(modifier = Modifier.width(8.dp))
 
-                            if (order.status != "Completed") {
+                            // 2. Nút Duyệt đơn (Khi đang chờ - Pending)
+                            if (order.status == "Pending") {
                                 Button(
                                     onClick = {
-                                        CoroutineScope(Dispatchers.IO).launch {
-                                            db.productDao().updateOrderStatus(order.id, "Completed")
-                                        }
+                                        scope.launch(Dispatchers.IO) { db.productDao().updateOrderStatus(order.id, "Processing") }
                                     },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
-                                ) { Text("Hoàn thành", fontSize = 11.sp) }
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.height(36.dp)
+                                ) {
+                                    Text("Duyệt đơn", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            // 3. Nút Giao hàng (Khi đã chuẩn bị xong - Processing)
+                            if (order.status == "Processing") {
+                                Button(
+                                    onClick = {
+                                        scope.launch(Dispatchers.IO) { db.productDao().updateOrderStatus(order.id, "Shipping") }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.height(36.dp)
+                                ) {
+                                    Text("Giao hàng", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            // 4. Nút Hoàn tất (Khi đang giao hàng - Shipping)
+                            if (order.status == "Shipping") {
+                                Button(
+                                    onClick = {
+                                        scope.launch(Dispatchers.IO) { db.productDao().updateOrderStatus(order.id, "Completed") }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.height(36.dp)
+                                ) {
+                                    Text("Hoàn tất", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
+
                     }
                 }
             }
