@@ -54,7 +54,7 @@ class LoginActivity : ComponentActivity() {
                     // Thực hiện chuyển màn hình
                     startActivity(intent)
 
-                    // Đóng Login để không quay lại được bằng nút Back
+
                     finish()
                 },
                 onRegisterClick = {
@@ -66,7 +66,7 @@ class LoginActivity : ComponentActivity() {
 }
 
 @Composable
-fun LoginScreen(onLoginSuccess: (com.example.project.data.entities.User) -> Unit, // Chỉ định rõ kiểu User
+fun LoginScreen(onLoginSuccess: (com.example.project.data.entities.User) -> Unit,
                 onRegisterClick: () -> Unit) {
     // State lưu dữ liệu người dùng nhập vào
     var email by remember { mutableStateOf("") }
@@ -128,6 +128,7 @@ fun LoginScreen(onLoginSuccess: (com.example.project.data.entities.User) -> Unit
                 .background(Color(0xFFFEE2E2), RoundedCornerShape(16.dp)),
             contentAlignment = Alignment.Center
         ) {
+            //hình gif
             Image(
                 painter = rememberAsyncImagePainter(
                     model = ImageRequest.Builder(context)

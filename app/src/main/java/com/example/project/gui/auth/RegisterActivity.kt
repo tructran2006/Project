@@ -57,7 +57,7 @@ class RegisterActivity : ComponentActivity() {
         var emailError by remember { mutableStateOf("") }
         var passwordError by remember { mutableStateOf("") }
         var confirmPasswordError by remember { mutableStateOf("") }
-        // Nên dùng biến ẩn/hiện riêng để tránh bấm 1 con mắt mà hiện cả 2 ô
+
 
         // State cho hiệu ứng gõ chữ
         val titleText = "3TP SHOP - ĐĂNG KÝ"
@@ -79,7 +79,7 @@ class RegisterActivity : ComponentActivity() {
             confirmPasswordError = ""
 
             if (fullName.trim().isEmpty()) {
-                fullNameError = "Vồ lòng nhập họ tên"
+                fullNameError = "Vui lòng nhập họ tên"
                 isValid = false
             }
 
@@ -115,6 +115,7 @@ class RegisterActivity : ComponentActivity() {
 
             // Tiêu đề với hiệu ứng gõ chữ
             Text(
+                // gọi hiệu ứng ở trên
                 text = displayedTitle,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.ExtraBold,
@@ -127,7 +128,7 @@ class RegisterActivity : ComponentActivity() {
                 modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
             )
 
-            // Ô nhập Họ Tên
+
             // Ô nhập họ và tên
             OutlinedTextField(
                 value = fullName,
@@ -148,7 +149,7 @@ class RegisterActivity : ComponentActivity() {
                 isError = fullNameError.isNotEmpty()
             )
 
-// Hiển thị lỗi nếu có
+            // Hiển thị lỗi nếu có
             if (fullNameError.isNotEmpty()) {
                 Text(
                     text = fullNameError,
@@ -179,7 +180,7 @@ class RegisterActivity : ComponentActivity() {
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
             )
 
-// Hiển thị lỗi nếu có
+            // Hiển thị lỗi nếu có
             if (emailError.isNotEmpty()) {
                 Text(
                     text = emailError,
@@ -193,7 +194,7 @@ class RegisterActivity : ComponentActivity() {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Ô nhập Mật khẩu (Có con mắt)
+            // Ô nhập Mật khẩu
             OutlinedTextField(
                 value = password,
                 onValueChange = {
@@ -214,8 +215,7 @@ class RegisterActivity : ComponentActivity() {
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
             )
             Spacer(modifier = Modifier.height(16.dp))
-            // Ô xác nhận Mật khẩu
-            // Ô nhập mật khẩu
+
             // Ô xác nhận mật khẩu
             OutlinedTextField(
                 value = confirmpassword,
@@ -284,7 +284,7 @@ class RegisterActivity : ComponentActivity() {
                             username = fullName.trim(),
                             email = email.trim(),
                             password = password.trim(),
-                            role = "user" // Mặc định là user
+                            role = "user"
                         )
                         db.userDao().register(newUser)
 

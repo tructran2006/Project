@@ -7,10 +7,10 @@ import androidx.room.PrimaryKey
 data class Order(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val userId: Int,
-    val shopEmail: String,        // Kiểm tra xem đã có dòng này chưa
-    val productDescription: String, // Kiểm tra xem đã có dòng này chưa
+    val shopEmail: String,
+    val productDescription: String,
     val totalPrice: Double,
     val status: String = "Pending",
-    val note: String? = "",         // Kiểm tra xem đã có dòng này chưa
+    val note: String? = "",
     val timestamp: Long = System.currentTimeMillis()
 )

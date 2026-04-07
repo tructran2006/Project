@@ -186,6 +186,56 @@ fun HomeTab(db: AppDatabase, primary: Color, searchQuery: String, onSearchChange
 }
 
 @Composable
+fun SearchBarSection(
+    searchQuery: String,
+    onSearchChange: (String) -> Unit
+) {
+    OutlinedTextField(
+        value = searchQuery,
+        onValueChange = onSearchChange,
+
+        placeholder = {
+            Text("Tìm kiếm sản phẩm...", color = Color(0xFF9C7349))
+        },
+
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                tint = Color(0xFF9C7349)
+            )
+        },
+
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(12.dp),
+
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = Color.White,
+            unfocusedContainerColor = Color.White,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            cursorColor = Color(0xFFF48C25)
+        )
+    )
+}
+
+
+@Composable
+fun AllProductsSection(primary: Color, db: AppDatabase, searchQuery: String, onProductClick: (Product) -> Unit) {
+    val allProducts by db.productDao().getAllProducts().collectAsState(initial = emptyList())
+    //tìm theo tên
+    val filteredProducts = remember(allProducts, searchQuery) { if (searchQuery.isEmpty()) allProducts else allProducts.filter { it.name.contains(searchQuery, true) } }
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text(if (searchQuery.isEmpty()) "Tất cả sản phẩm" else "Kết quả cho '$searchQuery'", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        Spacer(modifier = Modifier.height(16.dp))
+        filteredProducts.chunked(2).forEach { row -> Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) { row.forEach { product -> ProductCard(product, primary, Modifier.weight(1f), { onProductClick(product) }) }; if (row.size == 1) Spacer(Modifier.weight(1f)) }; Spacer(modifier = Modifier.height(16.dp)) }
+    }
+}
+
+//action danh mục ở trang chủ
+@Composable
 fun CategorySection(primary: Color, db: AppDatabase, onCategoryClick: (String) -> Unit, onSeeAll: () -> Unit) {
     val allProducts by db.productDao().getAllProducts().collectAsState(initial = emptyList())
     val categories = remember(allProducts) { allProducts.map { it.category }.distinct() }
@@ -218,19 +268,41 @@ fun CategorySection(primary: Color, db: AppDatabase, onCategoryClick: (String) -
     }
 }
 
+//sản phẩm trong danh mục
 @Composable
-fun SearchBarSection(searchQuery: String, onSearchChange: (String) -> Unit) {
-    OutlinedTextField(value = searchQuery, onValueChange = onSearchChange, placeholder = { Text("Tìm kiếm sản phẩm...", color = Color(0xFF9C7349)) }, leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color(0xFF9C7349)) }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), shape = RoundedCornerShape(12.dp), colors = TextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, cursorColor = Color(0xFFF48C25)))
-}
-
-@Composable
-fun CategoryItem(name: String, icon: ImageVector, bg: Color, tint: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Box(modifier = Modifier.size(64.dp).clip(RoundedCornerShape(16.dp)).background(bg), contentAlignment = Alignment.Center) { Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(32.dp)) }
-        Text(name, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+fun CategoryItem(
+    name: String,
+    icon: ImageVector,
+    bg: Color,
+    tint: Color
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(bg),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(32.dp)
+            )
+        }
+        Text(
+            text = name,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
+//trang danh mục
 @Composable
 fun CategoryScreen(primary: Color, initialCategory: String, onProductClick: (Product) -> Unit) {
     val context = LocalContext.current
@@ -263,6 +335,7 @@ fun CategoryScreen(primary: Color, initialCategory: String, onProductClick: (Pro
     }
 }
 
+//danh mục sản phẩm
 @Composable
 fun CategoryProductCard(product: Product, primary: Color, onClick: () -> Unit) {
     val context = LocalContext.current
@@ -279,7 +352,7 @@ fun CategoryProductCard(product: Product, primary: Color, onClick: () -> Unit) {
             modifier = Modifier.padding(10.dp).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 1. Ảnh bên trái (giữ nguyên hoặc cho bé lại tí cho cân đối)
+            // 1. Ảnh bên trái
             AsyncImage(
                 model = product.imageUrl.ifBlank { "https://via.placeholder.com/150" },
                 contentDescription = null,
@@ -297,15 +370,15 @@ fun CategoryProductCard(product: Product, primary: Color, onClick: () -> Unit) {
                 Text(text = formatPrice(product.price), color = primary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
 
-            // 3. Hai nút bấm bé lại và không bị đè nền
+            // 3. Hai nút bấm
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp) // Khoảng cách giữa 2 nút
             ) {
-                // Nút Yêu thích (Dùng Box để chỉnh size chuẩn)
+                // Nút Yêu thích
                 Box(
                     modifier = Modifier
-                        .size(32.dp) // Size nút bé lại
+                        .size(32.dp)
                         .clip(CircleShape)
                         .background(Color(0xFFFEE2E2))
                         .clickable {
@@ -318,14 +391,14 @@ fun CategoryProductCard(product: Product, primary: Color, onClick: () -> Unit) {
                         imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         contentDescription = null,
                         tint = Color.Red,
-                        modifier = Modifier.size(18.dp) // Size Icon bên trong
+                        modifier = Modifier.size(18.dp)
                     )
                 }
 
                 // Nút Thêm vào giỏ
                 Box(
                     modifier = Modifier
-                        .size(32.dp) // Size nút bé lại
+                        .size(32.dp)
                         .clip(CircleShape)
                         .background(primary)
                         .clickable {
@@ -346,13 +419,14 @@ fun CategoryProductCard(product: Product, primary: Color, onClick: () -> Unit) {
                         imageVector = Icons.Default.AddShoppingCart,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(18.dp) // Size Icon bên trong
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
         }
     }
 }
+//trang yêu thích
 @Composable
 fun FavoriteScreen(primary: Color) {
     val context = LocalContext.current
@@ -369,6 +443,7 @@ fun FavoriteScreen(primary: Color) {
     }
 }
 
+//danh sách các sản phẩm yêu thích
 @Composable
 fun FavoriteProductCard(product: Product, primary: Color, onRemove: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(4.dp)) {
@@ -380,11 +455,14 @@ fun FavoriteProductCard(product: Product, primary: Color, onRemove: () -> Unit) 
                 Text(product.category, color = Color.Gray, fontSize = 13.sp)
                 Text(formatPrice(product.price), color = primary, fontWeight = FontWeight.Bold)
             }
+
             IconButton(onClick = onRemove) { Icon(Icons.Default.Favorite, contentDescription = null, tint = Color.Red) }
         }
     }
 }
 
+
+//trang giỏ hàng
 @Composable
 fun CartScreen(primary: Color, selectedIds: Set<Int>, onIdsChange: (Set<Int>) -> Unit, onCheckout: () -> Unit) {
     val context = LocalContext.current
@@ -397,13 +475,16 @@ fun CartScreen(primary: Color, selectedIds: Set<Int>, onIdsChange: (Set<Int>) ->
     val cartItems by db.productDao().getCartFlow(userId).collectAsState(initial = emptyList())
     val validSelectedIds = remember(cartItems, selectedIds) { selectedIds.filter { id -> cartItems.any { it.productId == id } }.toSet() }
     LaunchedEffect(validSelectedIds.size) { if (validSelectedIds.size != selectedIds.size) onIdsChange(validSelectedIds) }
+    //công thức tính tiền
     val totalAmountValue by remember(cartItems, validSelectedIds, allProducts) { derivedStateOf { cartItems.filter { validSelectedIds.contains(it.productId) }.sumOf { item -> (productMap[item.productId]?.price ?: 0.0) * item.quantity } } }
+
     val scope = rememberCoroutineScope()
     Column(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 8.dp)) {
             if (cartItems.isEmpty()) Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Giỏ hàng trống", color = Color.Gray) }
             else Column {
                 Text("Giỏ hàng của bạn", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 16.dp))
+                //các chức năng
                 LazyColumn { items(cartItems) { item -> productMap[item.productId]?.let { CartProductItem(it, item.quantity, primary, selectedIds.contains(item.productId), { isChecked -> onIdsChange(if (isChecked) selectedIds + item.productId else selectedIds - item.productId) }, { qty -> scope.launch(Dispatchers.IO) { db.productDao().updateCartQuantity(item.cartId, qty) } }, { scope.launch(Dispatchers.IO) { db.productDao().deleteCartItem(item) } }); Spacer(modifier = Modifier.height(12.dp)) } } }
             }
         }
@@ -436,6 +517,7 @@ fun CartProductItem(product: Product, quantity: Int, primary: Color, isSelected:
                     IconButton(onClick = { onQuantityChange(quantity + 1) }, modifier = Modifier.size(30.dp)) { Icon(Icons.Default.AddCircleOutline, contentDescription = null, tint = primary) }
                 }
             }
+            //lấy từ CartSreen
             IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = null, tint = Color.LightGray) }
         }
     }
@@ -455,7 +537,7 @@ fun CheckoutScreen(primary: Color, userId: Int, selectedIds: List<Int>, onNaviga
     var userAddress by remember { mutableStateOf("") }
     var userPhone by remember { mutableStateOf("") }
     var isOrdering by remember { mutableStateOf(false) }
-    var isSuccess by remember { mutableStateOf(false) } // TRẠNG THÁI ĐẶT HÀNG THÀNH CÔNG
+    var isSuccess by remember { mutableStateOf(false) }
     var showInfoWarning by remember { mutableStateOf(false) }
     var warningMessage by remember { mutableStateOf("") }
     
@@ -612,17 +694,7 @@ fun CheckoutScreen(primary: Color, userId: Int, selectedIds: List<Int>, onNaviga
     }
 }
 
-@Composable
-fun AllProductsSection(primary: Color, db: AppDatabase, searchQuery: String, onProductClick: (Product) -> Unit) {
-    val allProducts by db.productDao().getAllProducts().collectAsState(initial = emptyList())
-    val filteredProducts = remember(allProducts, searchQuery) { if (searchQuery.isEmpty()) allProducts else allProducts.filter { it.name.contains(searchQuery, true) } }
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text(if (searchQuery.isEmpty()) "Tất cả sản phẩm" else "Kết quả cho '$searchQuery'", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-        Spacer(modifier = Modifier.height(16.dp))
-        filteredProducts.chunked(2).forEach { row -> Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) { row.forEach { product -> ProductCard(product, primary, Modifier.weight(1f), { onProductClick(product) }) }; if (row.size == 1) Spacer(Modifier.weight(1f)) }; Spacer(modifier = Modifier.height(16.dp)) }
-    }
-}
-
+//toàn bộ sản phẩm ở trang chủ
 @Composable
 fun ProductCard(product: Product, primary: Color, modifier: Modifier, onClick: () -> Unit) {
     val context = LocalContext.current
@@ -631,7 +703,7 @@ fun ProductCard(product: Product, primary: Color, modifier: Modifier, onClick: (
 
     Card(
         modifier = modifier
-            .fillMaxWidth() // Đảm bảo chiếm hết chiều ngang được chia
+            .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -659,7 +731,7 @@ fun ProductCard(product: Product, primary: Color, modifier: Modifier, onClick: (
                 maxLines = 1
             )
 
-            // 3. Giá tiền (Để một hàng riêng cho thoải mái)
+            // 3. Giá tiền
             Text(
                 text = formatPrice(product.price),
                 color = primary,
@@ -670,20 +742,20 @@ fun ProductCard(product: Product, primary: Color, modifier: Modifier, onClick: (
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 4. Hàng nút bấm (Tách biệt hoàn toàn bên dưới)
+            // 4. Hàng nút bấm
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp), // Tăng khoảng cách 2 nút
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Nút Yêu thích (Chiếm 1 phần diện tích)
+                // Nút Yêu thích
                 IconButton(
                     onClick = {
                         SharedPrefs.toggleFavorite(context, product.id)
                         isFavorite = !isFavorite
                     },
                     modifier = Modifier
-                        .weight(1f) // Làm nút dài ra một chút cho cân đối
+                        .weight(1f)
                         .height(36.dp)
                         .background(Color(0xFFFEE2E2), RoundedCornerShape(8.dp))
                 ) {
@@ -695,7 +767,7 @@ fun ProductCard(product: Product, primary: Color, modifier: Modifier, onClick: (
                     )
                 }
 
-                // Nút Thêm vào giỏ (Chiếm 1 phần diện tích)
+                // Nút Thêm vào giỏ
                 IconButton(
                     onClick = {
                         scope.launch(Dispatchers.IO) {
@@ -712,7 +784,7 @@ fun ProductCard(product: Product, primary: Color, modifier: Modifier, onClick: (
                         }
                     },
                     modifier = Modifier
-                        .weight(1f) // Làm nút dài ra một chút cho cân đối
+                        .weight(1f)
                         .height(36.dp)
                         .background(primary, RoundedCornerShape(8.dp))
                 ) {
@@ -728,6 +800,7 @@ fun ProductCard(product: Product, primary: Color, modifier: Modifier, onClick: (
     }
 }
 
+//chi tiết sản phẩm
 @Composable
 fun ProductDetailDialog(product: Product, onDismiss: () -> Unit, primary: Color) {
     AlertDialog(onDismissRequest = onDismiss, confirmButton = { Button(onClick = onDismiss) { Text("Đóng") } }, title = { Text(product.name, fontWeight = FontWeight.Bold) }, text = { Column { AsyncImage(model = product.imageUrl.ifBlank { "https://via.placeholder.com/150" }, contentDescription = null, modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(12.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop); Spacer(Modifier.height(16.dp)); Text("Giá: ${formatPrice(product.price)}", color = primary, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp); Text("Danh mục: ${product.category}", color = Color.Gray); Text("Shop: ${product.ownerEmail}", color = Color.Blue); Text(product.description, fontSize = 14.sp) } })

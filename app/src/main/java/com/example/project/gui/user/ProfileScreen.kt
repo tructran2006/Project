@@ -70,13 +70,13 @@ fun ProfileScreen(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // --- 1. Header & Avatar (ĐÃ CẬP NHẬT) ---
+        // --- 1. Header & Avatar  ---
         Spacer(modifier = Modifier.height(40.dp))
 
         // Box chứa ảnh và nút sửa ảnh
         Box(
-            modifier = Modifier.size(120.dp), // Tăng nhẹ kích thước Box để nút không bị cắt
-            contentAlignment = Alignment.Center // Ảnh luôn nằm giữa
+            modifier = Modifier.size(120.dp),
+            contentAlignment = Alignment.Center
         ) {
             // 1. Khung chứa ảnh đại diện
             Box(
@@ -104,7 +104,7 @@ fun ProfileScreen(
                 }
             }
 
-            // 2. NÚT SỬA ẢNH (Đưa xuống góc dưới bên phải)
+            // 2. NÚT SỬA ẢNH
             IconButton(
                 onClick = {
                     avatarUrlInput = currentAvatarUri ?: ""
@@ -112,9 +112,9 @@ fun ProfileScreen(
                 },
                 modifier = Modifier
                     .size(36.dp)
-                    .align(Alignment.BottomEnd) // ĐẨY XUỐNG GÓC DƯỚI
+                    .align(Alignment.BottomEnd)
                     .background(primaryColor, CircleShape)
-                    .border(2.dp, Color.White, CircleShape) // Thêm viền trắng cho nút nổi bật
+                    .border(2.dp, Color.White, CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.Default.Link,
@@ -140,7 +140,7 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // --- Menu List (Giữ nguyên của bạn) ---
+        // --- Menu List  ---
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -169,7 +169,6 @@ fun ProfileScreen(
                 onClick = onNavigateToFavorite
             )
 
-            // Sửa lại onClick của Đơn hàng:
             ProfileMenuItem(
                 icon = Icons.Default.ShoppingBag,
                 title = "Đơn hàng của tôi",
@@ -184,7 +183,7 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // --- Nút Đăng xuất (Giữ nguyên) ---
+        // --- Nút Đăng xuất  ---
         Button(
             onClick = {
                 val intent = Intent(context, LoginActivity::class.java)
@@ -248,7 +247,7 @@ fun ProfileScreen(
     }
 }
 
-// Hàm ProfileMenuItem giữ nguyên của bạn
+// Hàm ProfileMenuItem
 @Composable
 fun ProfileMenuItem(
     icon: ImageVector,

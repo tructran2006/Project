@@ -37,6 +37,7 @@ import com.example.project.formatPrice
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+//đơn hàng của tôi
 @Composable
 fun MyOrdersScreen(db: AppDatabase, userEmail: String, onBack: () -> Unit) {
     var userId by remember { mutableIntStateOf(1) }
@@ -79,16 +80,16 @@ fun MyOrdersScreen(db: AppDatabase, userEmail: String, onBack: () -> Unit) {
                                         "Pending" -> "Đang chờ xử lý"
                                         "Processing" -> "Đang chuẩn bị"
                                         "Shipping" -> "Đang giao hàng"
-                                        "Delivered", "Completed" -> "Hoàn tất" // Gộp cả 2 trạng thái này thành Hoàn tất
+                                        "Delivered", "Completed" -> "Hoàn tất"
                                         "Cancelled" -> "Đã hủy"
                                         else -> order.status
                                     },
                                     color = when(order.status) {
-                                        "Pending" -> Color(0xFFF48C25)  // Cam
-                                        "Processing" -> Color(0xFF3B82F6) // Xanh dương
-                                        "Shipping" -> Color(0xFF2196F3) // Xanh da trời
-                                        "Delivered", "Completed" -> Color(0xFF4CAF50) // Xanh lá
-                                        "Cancelled" -> Color.Red        // Đỏ
+                                        "Pending" -> Color(0xFFF48C25)
+                                        "Processing" -> Color(0xFF3B82F6)
+                                        "Shipping" -> Color(0xFF2196F3)
+                                        "Delivered", "Completed" -> Color(0xFF4CAF50)
+                                        "Cancelled" -> Color.Red
                                         else -> Color.Gray
                                     },
                                     fontWeight = FontWeight.Bold,

@@ -83,7 +83,7 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp).verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Card Hiển thị thông tin hiện tại (Chỉ xem)
+            // Card Hiển thị thông tin hiện tại
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -211,7 +211,7 @@ fun SettingsScreen(
                         options = AddressData.provinces,
                         onOptionSelected = {
                             selectedProvince = it
-                            selectedDistrict = "" // Reset khi đổi Tỉnh
+                            selectedDistrict = ""
                             selectedWard = ""
                         }
                     )
@@ -223,7 +223,7 @@ fun SettingsScreen(
                         options = if(selectedProvince.isNotEmpty()) AddressData.districts[selectedProvince] ?: emptyList() else emptyList(),
                         onOptionSelected = {
                             selectedDistrict = it
-                            selectedWard = "" // Reset khi đổi Quận
+                            selectedWard = ""
                         },
                         enabled = selectedProvince.isNotEmpty()
                     )
@@ -277,9 +277,7 @@ fun SettingsScreen(
     }
 }
 
-/**
- * Thành phần Dropdown chọn địa chỉ (Sử dụng ExposedDropdownMenuBox)
- */
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddressDropdown(

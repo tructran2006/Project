@@ -35,6 +35,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.text.style.TextOverflow
 import com.example.project.formatPrice
 
@@ -83,6 +85,7 @@ fun AdminScreen() {
                             fontWeight = FontWeight.Bold
                         )
                     },
+                    // quay về trang chủ
                     navigationIcon = {
                         IconButton(onClick = { activity?.finish() }) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -120,6 +123,7 @@ fun AdminScreen() {
     }
 }
 
+// quản lí sản phẩm
 @Composable
 fun ProductManager(db: AppDatabase, shopEmail: String) {
     val productList by db.productDao().getProductsByOwnerFlow(shopEmail).collectAsState(initial = emptyList())
@@ -148,24 +152,25 @@ fun ProductManager(db: AppDatabase, shopEmail: String) {
                 }
             }
         }
-
+        // nút tạo sản phẩm
         FloatingActionButton(
             onClick = { showAddDialog = true },
             modifier = Modifier.align(Alignment.BottomEnd).padding(24.dp),
             containerColor = Color(0xFFF48C25)
         ) { Icon(Icons.Default.Add, contentDescription = null, tint = Color.White) }
     }
-
+    // gọi hàm tạo sản phẩm
     if (showAddDialog) {
         AddProductWithImageDialog(db = db, adminEmail = shopEmail, onDismiss = { showAddDialog = false })
     }
-
+    // gọi hàm chỉnh sửa sản phẩm
     editingProduct?.let { product ->
         EditProductDialog(db = db, product = product, onDismiss = { editingProduct = null })
     }
 }
 
-fun mapStatusToVietnamese(status: String): Pair<String, Color> {
+// trạng thái của đơn hàng
+fun mapStatus(status: String): Pair<String, Color> {
     return when (status) {
         "Pending" -> "Chờ xác nhận" to Color(0xFFF48C25) // Cam
         "Processing" -> "Đang chuẩn bị" to Color(0xFF3B82F6) // Xanh dương
@@ -175,6 +180,8 @@ fun mapStatusToVietnamese(status: String): Pair<String, Color> {
         else -> status to Color.Gray
     }
 }
+
+//quản lí đơn hàng
 @Composable
 fun OrderManager(db: AppDatabase, email: String, isAdmin: Boolean) {
     val orderList by (if (isAdmin) db.productDao().getAllOrdersFlow()
@@ -188,7 +195,7 @@ fun OrderManager(db: AppDatabase, email: String, isAdmin: Boolean) {
     } else {
         LazyColumn(modifier = Modifier.fillMaxSize().padding(12.dp)) {
             items(orderList) { order ->
-                val (statusText, statusColor) = mapStatusToVietnamese(order.status)
+                val (statusText, statusColor) = mapStatus(order.status)
 
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
@@ -198,7 +205,6 @@ fun OrderManager(db: AppDatabase, email: String, isAdmin: Boolean) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Mã đơn: #${order.id}", fontWeight = FontWeight.Bold)
-                            // HIỂN THỊ TIẾNG VIỆT
                             Text(statusText, color = statusColor, fontWeight = FontWeight.Bold)
                         }
 
@@ -215,9 +221,10 @@ fun OrderManager(db: AppDatabase, email: String, isAdmin: Boolean) {
                         ) {
                             val scope = rememberCoroutineScope()
 
-                            // 1. Nút Hủy đơn (Có nền đỏ - Hiện khi đơn chưa hoàn thành và chưa bị hủy)
+                            // 1. Nút Hủy đơn
                             if (order.status != "Completed" && order.status != "Cancelled") {
                                 Button(
+                                    // gọi hàm thay đổi trạng thái trong ProductDao
                                     onClick = {
                                         scope.launch(Dispatchers.IO) { db.productDao().updateOrderStatus(order.id, "Cancelled") }
                                     },
@@ -232,9 +239,10 @@ fun OrderManager(db: AppDatabase, email: String, isAdmin: Boolean) {
 
                             Spacer(modifier = Modifier.width(8.dp))
 
-                            // 2. Nút Duyệt đơn (Khi đang chờ - Pending)
+                            // 2. Nút Duyệt đơn
                             if (order.status == "Pending") {
                                 Button(
+                                    // gọi hàm thay đổi trạng thái trong ProductDao
                                     onClick = {
                                         scope.launch(Dispatchers.IO) { db.productDao().updateOrderStatus(order.id, "Processing") }
                                     },
@@ -246,9 +254,10 @@ fun OrderManager(db: AppDatabase, email: String, isAdmin: Boolean) {
                                 }
                             }
 
-                            // 3. Nút Giao hàng (Khi đã chuẩn bị xong - Processing)
+                            // 3. Nút Giao hàng
                             if (order.status == "Processing") {
                                 Button(
+                                    // gọi hàm thay đổi trạng thái trong ProductDao
                                     onClick = {
                                         scope.launch(Dispatchers.IO) { db.productDao().updateOrderStatus(order.id, "Shipping") }
                                     },
@@ -260,9 +269,10 @@ fun OrderManager(db: AppDatabase, email: String, isAdmin: Boolean) {
                                 }
                             }
 
-                            // 4. Nút Hoàn tất (Khi đang giao hàng - Shipping)
+                            // 4. Nút Hoàn tất
                             if (order.status == "Shipping") {
                                 Button(
+                                    // gọi hàm thay đổi trạng thái trong ProductDao
                                     onClick = {
                                         scope.launch(Dispatchers.IO) { db.productDao().updateOrderStatus(order.id, "Completed") }
                                     },
@@ -282,10 +292,11 @@ fun OrderManager(db: AppDatabase, email: String, isAdmin: Boolean) {
     }
 }
 
+//hàm tạo sản phẩm với hình và mô tả
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddProductWithImageDialog(db: AppDatabase, adminEmail: String, onDismiss: () -> Unit) {
-    val context = LocalContext.current
+
     var name by remember { mutableStateOf("") }
     var price by remember { mutableStateOf("") }
     var imgUrl by remember { mutableStateOf("") }
@@ -332,6 +343,7 @@ fun AddProductWithImageDialog(db: AppDatabase, adminEmail: String, onDismiss: ()
                 )
             }
         },
+        // kiểm tra điều kiện của thêm sản phẩm
         confirmButton = {
             Button(onClick = {
                 val pDouble = price.toDoubleOrNull() ?: 0.0
@@ -345,11 +357,13 @@ fun AddProductWithImageDialog(db: AppDatabase, adminEmail: String, onDismiss: ()
         }
     )
 }
+
+//hàm tạo danh mục
 @Composable
 fun CategoryManager(db: AppDatabase) {
     val categoryList by db.categoryDao().getAllCategories().collectAsState(initial = emptyList())
     var newCatName by remember { mutableStateOf("") }
-    val context = LocalContext.current
+
 
     // State cho việc sửa và xóa
     var editingCategory by remember { mutableStateOf<Category?>(null) }
@@ -461,12 +475,6 @@ fun CategoryManager(db: AppDatabase) {
     }
 }
 
-
-fun updateStatus(db: AppDatabase, orderId: Int, newStatus: String) {
-    CoroutineScope(Dispatchers.IO).launch {
-        db.orderDao().updateOrderStatus(orderId, newStatus)
-    }
-}
 @Composable
 fun AdminProductItem(product: Product, onEdit: () -> Unit, onDelete: () -> Unit) {
     var isExpanded by remember { mutableStateOf(false) }
@@ -504,13 +512,18 @@ fun AdminProductItem(product: Product, onEdit: () -> Unit, onDelete: () -> Unit)
     }
 }
 
+
+//hàm chỉnh sửa đơn hàng
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProductDialog(product: Product, db: AppDatabase, onDismiss: () -> Unit) {
     val context = LocalContext.current
+
+
     var name by remember { mutableStateOf(product.name) }
     var price by remember { mutableStateOf(product.price.toLong().toString()) }
     var imgUrl by remember { mutableStateOf(product.imageUrl) }
+    var description by remember { mutableStateOf(product.description) } // Thêm dòng này
 
     val categoryList by db.categoryDao().getAllCategories().collectAsState(initial = emptyList())
     var selectedCategory by remember { mutableStateOf(product.category) }
@@ -520,9 +533,12 @@ fun EditProductDialog(product: Product, db: AppDatabase, onDismiss: () -> Unit) 
         onDismissRequest = onDismiss,
         title = { Text("Chỉnh sửa sản phẩm", fontWeight = FontWeight.Bold) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Tên sản phẩm") })
-                OutlinedTextField(value = price, onValueChange = { if (it.all { c -> c.isDigit() }) price = it }, label = { Text("Giá tiền") })
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Tên sản phẩm") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = price, onValueChange = { if (it.all { c -> c.isDigit() }) price = it }, label = { Text("Giá tiền") }, modifier = Modifier.fillMaxWidth())
 
                 // Dropdown chọn danh mục
                 ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
@@ -538,20 +554,31 @@ fun EditProductDialog(product: Product, db: AppDatabase, onDismiss: () -> Unit) 
                         }
                     }
                 }
-                OutlinedTextField(value = imgUrl, onValueChange = { imgUrl = it }, label = { Text("Link ảnh") })
+
+                OutlinedTextField(value = imgUrl, onValueChange = { imgUrl = it }, label = { Text("Link ảnh") }, modifier = Modifier.fillMaxWidth())
+
+
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Mô tả sản phẩm") },
+                    modifier = Modifier.fillMaxWidth().height(120.dp),
+                    maxLines = 5
+                )
             }
         },
         confirmButton = {
             Button(onClick = {
-                if (name.isBlank() || price.isBlank()) {
-                    Toast.makeText(context, "Không được để trống!", Toast.LENGTH_SHORT).show()
+                if (name.isBlank() || price.isBlank() || description.isBlank()) {
+                    Toast.makeText(context, "Vui lòng điền đầy đủ thông tin!", Toast.LENGTH_SHORT).show()
                 } else {
                     CoroutineScope(Dispatchers.IO).launch {
                         val updatedProduct = product.copy(
                             name = name,
                             price = price.toDoubleOrNull() ?: 0.0,
                             category = selectedCategory,
-                            imageUrl = imgUrl
+                            imageUrl = imgUrl,
+                            description = description
                         )
                         db.productDao().updateProduct(updatedProduct)
                         withContext(Dispatchers.Main) { onDismiss() }
@@ -560,5 +587,51 @@ fun EditProductDialog(product: Product, db: AppDatabase, onDismiss: () -> Unit) 
             }) { Text("Cập nhật") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } }
+    )
+}
+@Composable
+fun AddProductDialog(onDismiss: () -> Unit, onConfirm: (String, Double, String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var price by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Thêm sản phẩm mới", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.material3.OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Tên sản phẩm") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                androidx.compose.material3.OutlinedTextField(
+                    value = price,
+                    onValueChange = { if (it.all { char -> char.isDigit() }) price = it },
+                    label = { Text("Giá tiền") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                // Ô NHẬP MÔ TẢ
+                androidx.compose.material3.OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Mô tả chi tiết") },
+                    modifier = Modifier.fillMaxWidth().height(120.dp),
+                    maxLines = 4
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(name, price.toDoubleOrNull() ?: 0.0, description) },
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFFF48C25))
+            ) {
+                Text("Lưu")
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Hủy") }
+        }
     )
 }
