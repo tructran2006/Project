@@ -24,6 +24,16 @@ interface OrderDao {
     @Query("SELECT * FROM order_table WHERE shopEmail = :email ORDER BY timestamp DESC")
     fun getOrdersForShop(email: String): Flow<List<Order>>
 
+
+    // Thống kê tổng doanh thu từ tất cả các đơn hàng đã hoàn thành
+    @Query("SELECT SUM(totalPrice) FROM order_table WHERE status = 'Completed'")
+    fun getTotalRevenue(): Flow<Double?>
+
+    // Thống kê số lượng đơn hàng theo trạng thái
+    @Query("SELECT COUNT(id) FROM order_table WHERE status = :status")
+
+    fun getOrderCountByStatus(status: String): Flow<Int>
+
     // --- DÀNH CHO USER (NGƯỜI MUA) ---
     // Xem lịch sử mua hàng cá nhân
     @Query("SELECT * FROM order_table WHERE userId = :uId ORDER BY timestamp DESC")

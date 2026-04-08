@@ -373,7 +373,7 @@ fun CategoryProductCard(product: Product, primary: Color, onClick: () -> Unit) {
             // 3. Hai nút bấm
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp) // Khoảng cách giữa 2 nút
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Nút Yêu thích
                 Box(
@@ -485,7 +485,12 @@ fun CartScreen(primary: Color, selectedIds: Set<Int>, onIdsChange: (Set<Int>) ->
             else Column {
                 Text("Giỏ hàng của bạn", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 16.dp))
                 //các chức năng
-                LazyColumn { items(cartItems) { item -> productMap[item.productId]?.let { CartProductItem(it, item.quantity, primary, selectedIds.contains(item.productId), { isChecked -> onIdsChange(if (isChecked) selectedIds + item.productId else selectedIds - item.productId) }, { qty -> scope.launch(Dispatchers.IO) { db.productDao().updateCartQuantity(item.cartId, qty) } }, { scope.launch(Dispatchers.IO) { db.productDao().deleteCartItem(item) } }); Spacer(modifier = Modifier.height(12.dp)) } } }
+                // nút tăng giảm sản phẩm giỏ hàng
+                LazyColumn { items(cartItems) { item -> productMap[item.productId]?.let {
+                    CartProductItem(it, item.quantity, primary, selectedIds.contains(item.productId),
+                        { isChecked -> onIdsChange(if (isChecked) selectedIds + item.productId else selectedIds - item.productId) },
+                        { qty -> scope.launch(Dispatchers.IO) { db.productDao().updateCartQuantity(item.cartId, qty) } },
+                        { scope.launch(Dispatchers.IO) { db.productDao().deleteCartItem(item) } }); Spacer(modifier = Modifier.height(12.dp)) } } }
             }
         }
         Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(12.dp), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)) {
@@ -501,6 +506,7 @@ fun CartScreen(primary: Color, selectedIds: Set<Int>, onIdsChange: (Set<Int>) ->
     }
 }
 
+
 @Composable
 fun CartProductItem(product: Product, quantity: Int, primary: Color, isSelected: Boolean, onCheckedChange: (Boolean) -> Unit, onQuantityChange: (Int) -> Unit, onDelete: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
@@ -512,8 +518,10 @@ fun CartProductItem(product: Product, quantity: Int, primary: Color, isSelected:
                 Text(product.name, fontWeight = FontWeight.Bold, maxLines = 1)
                 Text(formatPrice(product.price), color = primary)
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    //nút dấu trừ , gọi hàm onQuantityChange để giảm số lượng
                     IconButton(onClick = { if (quantity > 1) onQuantityChange(quantity - 1) }, modifier = Modifier.size(30.dp)) { Icon(Icons.Default.RemoveCircleOutline, contentDescription = null, tint = primary) }
                     Text("$quantity", modifier = Modifier.padding(horizontal = 8.dp), fontWeight = FontWeight.Bold)
+                    //nút dấu cộng , gọi hàm onQuantityChange để tăng số lượng
                     IconButton(onClick = { onQuantityChange(quantity + 1) }, modifier = Modifier.size(30.dp)) { Icon(Icons.Default.AddCircleOutline, contentDescription = null, tint = primary) }
                 }
             }
@@ -523,6 +531,7 @@ fun CartProductItem(product: Product, quantity: Int, primary: Color, isSelected:
     }
 }
 
+//thanh toán
 @Composable
 fun CheckoutScreen(primary: Color, userId: Int, selectedIds: List<Int>, onNavigateToSettings: () -> Unit, onViewOrders: () -> Unit) {
     val context = LocalContext.current
@@ -806,6 +815,7 @@ fun ProductDetailDialog(product: Product, onDismiss: () -> Unit, primary: Color)
     AlertDialog(onDismissRequest = onDismiss, confirmButton = { Button(onClick = onDismiss) { Text("Đóng") } }, title = { Text(product.name, fontWeight = FontWeight.Bold) }, text = { Column { AsyncImage(model = product.imageUrl.ifBlank { "https://via.placeholder.com/150" }, contentDescription = null, modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(12.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop); Spacer(Modifier.height(16.dp)); Text("Giá: ${formatPrice(product.price)}", color = primary, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp); Text("Danh mục: ${product.category}", color = Color.Gray); Text("Shop: ${product.ownerEmail}", color = Color.Blue); Text(product.description, fontSize = 14.sp) } })
 }
 
+//thanh navigation
 @Composable
 fun BottomNavigationBar(primaryColor: Color, currentTab: String, onTabClick: (String) -> Unit) {
     NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {

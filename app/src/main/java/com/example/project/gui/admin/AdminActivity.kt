@@ -70,8 +70,11 @@ fun AdminScreen() {
     val userRole = activity?.intent?.getStringExtra("USER_ROLE") ?: "shop"
 
     // Định nghĩa Tab dựa trên Role
-    val tabs = if (userRole == "admin") listOf("Danh mục", "Đơn hệ thống")
-    else listOf("Sản phẩm của tôi", "Đơn khách đặt")
+    val tabs = if (userRole == "admin") {
+        listOf("Thống kê", "Danh mục", "Đơn hệ thống")
+    } else {
+        listOf("Thống kê", "Sản phẩm", "Đơn khách")
+    }
 
     var selectedTab by remember { mutableIntStateOf(0) }
 
@@ -110,13 +113,15 @@ fun AdminScreen() {
         Box(modifier = Modifier.padding(innerPadding).fillMaxSize().background(Color(0xFFF8F7F5))) {
             if (userRole == "admin") {
                 when (selectedTab) {
-                    0 -> CategoryManager(db)
-                    1 -> OrderManager(db, userEmail, isAdmin = true)
+                    0 -> AdminDashboardTab(db, userRole)
+                    1 -> CategoryManager(db)
+                    2 -> OrderManager(db, userEmail, isAdmin = true)
                 }
             } else {
                 when (selectedTab) {
-                    0 -> ProductManager(db, userEmail)
-                    1 -> OrderManager(db, userEmail, isAdmin = false)
+                    0 -> AdminDashboardTab(db, userRole)
+                    1 -> ProductManager(db, userEmail)
+                    2 -> OrderManager(db, userEmail, isAdmin = false)
                 }
             }
         }
@@ -589,49 +594,104 @@ fun EditProductDialog(product: Product, db: AppDatabase, onDismiss: () -> Unit) 
         dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } }
     )
 }
-@Composable
-fun AddProductDialog(onDismiss: () -> Unit, onConfirm: (String, Double, String) -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var price by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
 
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Thêm sản phẩm mới", fontWeight = FontWeight.Bold) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                androidx.compose.material3.OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Tên sản phẩm") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                androidx.compose.material3.OutlinedTextField(
-                    value = price,
-                    onValueChange = { if (it.all { char -> char.isDigit() }) price = it },
-                    label = { Text("Giá tiền") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                // Ô NHẬP MÔ TẢ
-                androidx.compose.material3.OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    label = { Text("Mô tả chi tiết") },
-                    modifier = Modifier.fillMaxWidth().height(120.dp),
-                    maxLines = 4
-                )
+//trang thống kê
+@Composable
+fun AdminDashboardTab(db: AppDatabase, userRole: String) {
+    // --- Dữ liệu cho Shop ---
+    val totalRevenue by db.productDao().getTotalRevenue().collectAsState(initial = 0.0)
+    val pendingCount by db.productDao().getPendingOrderCount().collectAsState(initial = 0)
+    val shopProductCount by db.productDao().getTotalProductCount().collectAsState(initial = 0)
+
+    // --- Dữ liệu cho Admin ---
+    val totalUsers by db.userDao().getTotalUserCount().collectAsState(initial = 0)
+    val totalShops by db.userDao().getTotalShopCount().collectAsState(initial = 0)
+    val systemProductCount by db.productDao().getSystemProductCount().collectAsState(initial = 0)
+    val totalCategories by db.categoryDao().getAllCategories().collectAsState(initial = emptyList())
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = if (userRole == "admin") "Thống kê hệ thống" else "Thống kê kinh doanh",
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 22.sp,
+            color = Color(0xFFF48C25)
+        )
+
+        if (userRole == "admin") {
+            //trang thống kê của admin
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // lấy từ hàm getTotalUserCount() trong UserDao
+                    DashboardSmallCard("Người dùng", "$totalUsers", Icons.Default.People, Color(0xFF4CAF50), Modifier.weight(1f))
+                    // lấy từ hàm getTotalShopCount() trong UserDao
+                    DashboardSmallCard("Cửa hàng", "$totalShops", Icons.Default.Store, Color(0xFF2196F3), Modifier.weight(1f))
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    //lấy từ hàm getSystemProductCount() trong ProductDao
+                    DashboardSmallCard("Sản phẩm", "$systemProductCount", Icons.Default.Inventory2, Color(0xFF9C27B0), Modifier.weight(1f))
+                    // lấy từ hàm getAllCategories() trong CategoryDao
+                    DashboardSmallCard("Danh mục", "${totalCategories.size}", Icons.Default.Category, Color(0xFFE91E63), Modifier.weight(1f))
+                }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = { onConfirm(name, price.toDoubleOrNull() ?: 0.0, description) },
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFFF48C25))
+        } else {
+            // trang thống kê của shop
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF4CAF50).copy(alpha = 0.1f)),
+                shape = RoundedCornerShape(20.dp)
             ) {
-                Text("Lưu")
+                Column(
+                    modifier = Modifier.padding(24.dp).fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(Icons.Default.MonetizationOn, null, tint = Color(0xFF4CAF50), modifier = Modifier.size(50.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Tổng doanh thu", fontSize = 15.sp, color = Color.Gray)
+                    //lấy hàm getTotalRevenue() trong ProductDao
+                    Text(formatPrice(totalRevenue ?: 0.0), fontSize = 30.sp, fontWeight = FontWeight.Black, color = Color(0xFF4CAF50))
+                }
             }
-        },
-        dismissButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Hủy") }
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                // lấy từ hàm getPendingOrderCount() trong ProductDao
+                DashboardSmallCard("Đơn chờ", "$pendingCount", Icons.Default.PendingActions, Color(0xFFF48C25), Modifier.weight(1f))
+                // lấy từ hàm getTotalProductCount() trong ProductDao
+                DashboardSmallCard("Sản phẩm", "$shopProductCount", Icons.Default.Inventory2, Color(0xFF2196F3), Modifier.weight(1f))
+            }
         }
-    )
+    }
+}
+
+@Composable
+fun DashboardSmallCard(title: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color, modifier: Modifier) {
+    Card(
+        modifier = modifier.height(140.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(4.dp),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier.size(48.dp).background(color.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(28.dp))
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(text = title, fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
+            Text(text = value, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+        }
+    }
 }

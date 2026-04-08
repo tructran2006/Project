@@ -35,7 +35,17 @@ interface ProductDao {
     @Query("SELECT * FROM product_table WHERE id = :pId LIMIT 1")
     suspend fun getProductById(pId: Int): Product?
 
+    // Thống kê tổng doanh thu (Chỉ tính đơn đã hoàn thành)
+    @Query("SELECT SUM(totalPrice) FROM order_table WHERE status = 'Completed'")
+    fun getTotalRevenue(): kotlinx.coroutines.flow.Flow<Double?>
 
+    // Thống kê số lượng đơn hàng đang chờ xử lý
+    @Query("SELECT COUNT(id) FROM order_table WHERE status = 'Pending'")
+    fun getPendingOrderCount(): kotlinx.coroutines.flow.Flow<Int>
+
+    // Thống kê tổng số sản phẩm trong hệ thống
+    @Query("SELECT COUNT(id) FROM product_table")
+    fun getTotalProductCount(): kotlinx.coroutines.flow.Flow<Int>
     // ========================================================================
     // 2. QUẢN LÝ GIỎ HÀNG (CART)
     // ========================================================================
@@ -99,4 +109,16 @@ interface ProductDao {
 
     @Query("SELECT * FROM product_table WHERE name LIKE '%' || :query || '%'")
     fun searchProducts(query: String): Flow<List<Product>>
+
+    // quản lý shop
+
+
+    // Đếm số lượng email chủ cửa hàng duy nhất (để biết có bao nhiêu Shop)
+    // Đếm chính xác số người dùng có vai trò là người bán (Shop)
+    @Query("SELECT COUNT(id) FROM user_table WHERE role = 'shop'")
+    fun getTotalShopCount(): kotlinx.coroutines.flow.Flow<Int>
+
+    // Đếm toàn bộ sản phẩm không phân biệt chủ sở hữu
+    @Query("SELECT COUNT(id) FROM product_table")
+    fun getSystemProductCount(): kotlinx.coroutines.flow.Flow<Int>
 }

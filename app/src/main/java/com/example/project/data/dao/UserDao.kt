@@ -24,7 +24,15 @@ interface UserDao {
     @Query("SELECT * FROM user_table WHERE email = :email LIMIT 1")
     suspend fun getUserByEmail(email: String): User?
 
+    //đếm tổng số người dùng trong hệ thống
+    @Query("SELECT COUNT(id) FROM user_table")
+    fun getTotalUserCount(): kotlinx.coroutines.flow.Flow<Int>
+
     // --- QUẢN LÝ ROLE (DÀNH CHO ADMIN VÀ SHOP) ---
+    // Thêm hàm này để đếm những ai là người bán (shop)
+    @Query("SELECT COUNT(id) FROM user_table WHERE role = 'shop'")
+    fun getTotalShopCount(): kotlinx.coroutines.flow.Flow<Int>
+
 
     // Cập nhật Role (Dùng khi Admin duyệt một User lên làm Shop)
     @Query("UPDATE user_table SET role = :newRole WHERE email = :email")
