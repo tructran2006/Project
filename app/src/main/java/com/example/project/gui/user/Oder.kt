@@ -1,6 +1,7 @@
 package com.example.project.gui.user
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,7 +25,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,15 +36,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.project.data.database.AppDatabase
+import com.example.project.data.entities.Product
 import com.example.project.formatPrice
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 //đơn hàng của tôi
 @Composable
 fun MyOrdersScreen(db: AppDatabase, userEmail: String, onBack: () -> Unit) {
     var userId by remember { mutableIntStateOf(1) }
-    
+
+    var selectedProductForDetail by remember { mutableStateOf<Product?>(null) }
+    val scope = rememberCoroutineScope()
+
+
     LaunchedEffect(userEmail) {
         if (userEmail.isNotEmpty() && userEmail != "...") {
             withContext(Dispatchers.IO) {
@@ -52,7 +61,8 @@ fun MyOrdersScreen(db: AppDatabase, userEmail: String, onBack: () -> Unit) {
         }
     }
 
-    val orderList by db.productDao().getOrdersByUserFlow(userId).collectAsState(initial = emptyList())
+    val orderList by db.productDao().getOrdersByUserFlow(userId)
+        .collectAsState(initial = emptyList())
 
     Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF8F7F5))) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -68,15 +78,37 @@ fun MyOrdersScreen(db: AppDatabase, userEmail: String, onBack: () -> Unit) {
             LazyColumn(modifier = Modifier.padding(horizontal = 16.dp)) {
                 items(orderList) { order ->
                     Card(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp)
+                            .clickable { // 2. THÊM SỰ KIỆN CLICK VÀO ĐÂY
+                                scope.launch(Dispatchers.IO) {
+                                    // Tách tên sản phẩm từ description (giả sử format là "1x Tên sản phẩm")
+                                    // Cách đơn giản: Tìm sản phẩm đầu tiên có tên xuất hiện trong description
+                                    val allProducts = db.productDao()
+                                        .getAllProductsList() // Cần thêm hàm này vào DAO hoặc dùng Flow
+                                    val foundProduct = allProducts.find { product ->
+                                        order.productDescription.contains(
+                                            product.name,
+                                            ignoreCase = true
+                                        )
+                                    }
+                                    withContext(Dispatchers.Main) {
+                                        selectedProductForDetail = foundProduct
+                                    }
+                                }
+                            },
                         colors = CardDefaults.cardColors(containerColor = Color.White),
                         elevation = CardDefaults.cardElevation(2.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
                                 Text("Mã đơn: #${order.id}", fontWeight = FontWeight.Bold)
                                 Text(
-                                    text = when(order.status) {
+                                    text = when (order.status) {
                                         "Pending" -> "Đang chờ xử lý"
                                         "Processing" -> "Đang chuẩn bị"
                                         "Shipping" -> "Đang giao hàng"
@@ -84,7 +116,7 @@ fun MyOrdersScreen(db: AppDatabase, userEmail: String, onBack: () -> Unit) {
                                         "Cancelled" -> "Đã hủy"
                                         else -> order.status
                                     },
-                                    color = when(order.status) {
+                                    color = when (order.status) {
                                         "Pending" -> Color(0xFFF48C25)
                                         "Processing" -> Color(0xFF3B82F6)
                                         "Shipping" -> Color(0xFF2196F3)
@@ -97,7 +129,11 @@ fun MyOrdersScreen(db: AppDatabase, userEmail: String, onBack: () -> Unit) {
                                 )
                             }
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("Sản phẩm: ${order.productDescription}", fontSize = 14.sp, maxLines = 2)
+                            Text(
+                                "Sản phẩm: ${order.productDescription}",
+                                fontSize = 14.sp,
+                                maxLines = 2
+                            )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 "Tổng thanh toán: ${formatPrice(order.totalPrice)}",
@@ -112,6 +148,13 @@ fun MyOrdersScreen(db: AppDatabase, userEmail: String, onBack: () -> Unit) {
                     }
                 }
             }
+        }
+        selectedProductForDetail?.let { product ->
+            com.example.project.ProductDetailDialog(
+                product = product,
+                onDismiss = { selectedProductForDetail = null },
+                primary = Color(0xFFF48C25)
+            )
         }
     }
 }

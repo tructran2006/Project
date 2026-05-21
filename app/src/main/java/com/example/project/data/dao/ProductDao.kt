@@ -121,4 +121,29 @@ interface ProductDao {
     // Đếm toàn bộ sản phẩm không phân biệt chủ sở hữu
     @Query("SELECT COUNT(id) FROM product_table")
     fun getSystemProductCount(): kotlinx.coroutines.flow.Flow<Int>
+
+    @Query("""
+        SELECT SUM(o.totalPrice) 
+        FROM order_table o 
+        JOIN product_table p ON o.productDescription LIKE '%' || p.name || '%' 
+        WHERE p.ownerEmail = :email AND o.status = 'Completed'
+    """)
+    fun getTotalRevenueByShop(email: String): kotlinx.coroutines.flow.Flow<Double?>
+
+    // 2. Thống kê đơn chờ cho Shop
+    @Query("""
+        SELECT COUNT(o.id) 
+        FROM order_table o 
+        JOIN product_table p ON o.productDescription LIKE '%' || p.name || '%' 
+        WHERE p.ownerEmail = :email AND o.status = 'Pending'
+    """)
+    fun getPendingOrderCountByShop(email: String): kotlinx.coroutines.flow.Flow<Int>
+
+    // 3. Thống kê sản phẩm của Shop (Cái này đơn giản vì bảng Product có sẵn email)
+    @Query("SELECT COUNT(id) FROM product_table WHERE ownerEmail = :email")
+    fun getProductCountByShop(email: String): kotlinx.coroutines.flow.Flow<Int>
+
+
+    @Query("SELECT EXISTS(SELECT 1 FROM order_table WHERE productDescription LIKE '%' || :productName || '%')")
+    suspend fun isProductOrdered(productName: String): Boolean
 }

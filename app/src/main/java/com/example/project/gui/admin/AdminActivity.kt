@@ -113,13 +113,13 @@ fun AdminScreen() {
         Box(modifier = Modifier.padding(innerPadding).fillMaxSize().background(Color(0xFFF8F7F5))) {
             if (userRole == "admin") {
                 when (selectedTab) {
-                    0 -> AdminDashboardTab(db, userRole)
+                    0 -> AdminDashboardTab(db, userRole,userEmail)
                     1 -> CategoryManager(db)
                     2 -> OrderManager(db, userEmail, isAdmin = true)
                 }
             } else {
                 when (selectedTab) {
-                    0 -> AdminDashboardTab(db, userRole)
+                    0 -> AdminDashboardTab(db, userRole,userEmail)
                     1 -> ProductManager(db, userEmail)
                     2 -> OrderManager(db, userEmail, isAdmin = false)
                 }
@@ -131,6 +131,7 @@ fun AdminScreen() {
 // quản lí sản phẩm
 @Composable
 fun ProductManager(db: AppDatabase, shopEmail: String) {
+    val context = LocalContext.current
     val productList by db.productDao().getProductsByOwnerFlow(shopEmail).collectAsState(initial = emptyList())
     var showAddDialog by remember { mutableStateOf(false) }
     var editingProduct by remember { mutableStateOf<Product?>(null) }
@@ -151,7 +152,26 @@ fun ProductManager(db: AppDatabase, shopEmail: String) {
                         product = product,
                         onEdit = { editingProduct = product },
                         onDelete = {
-                            CoroutineScope(Dispatchers.IO).launch { db.productDao().deleteProduct(product) }
+                            CoroutineScope(Dispatchers.IO).launch {
+                                val orderCount = db.orderDao().countOrdersContainsProduct(
+                                    shopEmail = shopEmail,
+                                    productName = product.name
+                                )
+
+                                withContext(Dispatchers.Main) {
+                                    if (orderCount > 0) {
+                                        Toast.makeText(
+                                            context,
+                                            "Sản phẩm đã có người mua đặt hàng, không thể xóa!",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    } else {
+                                        CoroutineScope(Dispatchers.IO).launch {
+                                            db.productDao().deleteProduct(product)
+                                        }
+                                    }
+                                }
+                            }
                         }
                     )
                 }
@@ -189,9 +209,11 @@ fun mapStatus(status: String): Pair<String, Color> {
 //quản lí đơn hàng
 @Composable
 fun OrderManager(db: AppDatabase, email: String, isAdmin: Boolean) {
-    val orderList by (if (isAdmin) db.productDao().getAllOrdersFlow()
-    else db.productDao().getOrdersForShopFlow(email))
+    val orderList by (if (isAdmin) db.orderDao().getAllOrdersFlow()
+    else db.orderDao().getOrdersForShop(email))
         .collectAsState(initial = emptyList())
+
+    var selectedOrder by remember { mutableStateOf<Order?>(null) }
 
     if (orderList.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -201,55 +223,89 @@ fun OrderManager(db: AppDatabase, email: String, isAdmin: Boolean) {
         LazyColumn(modifier = Modifier.fillMaxSize().padding(12.dp)) {
             items(orderList) { order ->
                 val (statusText, statusColor) = mapStatus(order.status)
+                val scope = rememberCoroutineScope()
 
                 Card(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp)
+                        .clickable { selectedOrder = order },
                     elevation = CardDefaults.cardElevation(2.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
                             Text("Mã đơn: #${order.id}", fontWeight = FontWeight.Bold)
                             Text(statusText, color = statusColor, fontWeight = FontWeight.Bold)
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("🛒 ${order.productDescription}", fontSize = 14.sp, color = Color.DarkGray)
-                        Text("Tổng tiền: ${formatPrice(order.totalPrice)}", fontWeight = FontWeight.Bold, color = Color(0xFFF48C25))
 
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp)
+                        Text(
+                            text = "🛒 ${order.productDescription}",
+                            fontSize = 14.sp,
+                            color = Color.DarkGray,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Text(
+                            "Tổng tiền: ${formatPrice(order.totalPrice)}",
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFF48C25)
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            "Bấm để xem chi tiết đơn hàng",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 12.dp),
+                            thickness = 0.5.dp
+                        )
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.End,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            val scope = rememberCoroutineScope()
-
-                            // 1. Nút Hủy đơn
                             if (order.status != "Completed" && order.status != "Cancelled") {
                                 Button(
-                                    // gọi hàm thay đổi trạng thái trong ProductDao
                                     onClick = {
-                                        scope.launch(Dispatchers.IO) { db.productDao().updateOrderStatus(order.id, "Cancelled") }
+                                        scope.launch(Dispatchers.IO) {
+                                            db.orderDao().updateOrderStatus(order.id, "Cancelled")
+                                        }
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935)),
                                     shape = RoundedCornerShape(8.dp),
                                     modifier = Modifier.height(36.dp),
                                     contentPadding = PaddingValues(horizontal = 12.dp)
                                 ) {
-                                    Text("Hủy đơn", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Text(
+                                        "Hủy đơn",
+                                        color = Color.White,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
                             }
 
                             Spacer(modifier = Modifier.width(8.dp))
 
-                            // 2. Nút Duyệt đơn
                             if (order.status == "Pending") {
                                 Button(
-                                    // gọi hàm thay đổi trạng thái trong ProductDao
                                     onClick = {
-                                        scope.launch(Dispatchers.IO) { db.productDao().updateOrderStatus(order.id, "Processing") }
+                                        scope.launch(Dispatchers.IO) {
+                                            db.orderDao().updateOrderStatus(order.id, "Processing")
+                                        }
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
                                     shape = RoundedCornerShape(8.dp),
@@ -259,12 +315,12 @@ fun OrderManager(db: AppDatabase, email: String, isAdmin: Boolean) {
                                 }
                             }
 
-                            // 3. Nút Giao hàng
                             if (order.status == "Processing") {
                                 Button(
-                                    // gọi hàm thay đổi trạng thái trong ProductDao
                                     onClick = {
-                                        scope.launch(Dispatchers.IO) { db.productDao().updateOrderStatus(order.id, "Shipping") }
+                                        scope.launch(Dispatchers.IO) {
+                                            db.orderDao().updateOrderStatus(order.id, "Shipping")
+                                        }
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
                                     shape = RoundedCornerShape(8.dp),
@@ -274,12 +330,12 @@ fun OrderManager(db: AppDatabase, email: String, isAdmin: Boolean) {
                                 }
                             }
 
-                            // 4. Nút Hoàn tất
                             if (order.status == "Shipping") {
                                 Button(
-                                    // gọi hàm thay đổi trạng thái trong ProductDao
                                     onClick = {
-                                        scope.launch(Dispatchers.IO) { db.productDao().updateOrderStatus(order.id, "Completed") }
+                                        scope.launch(Dispatchers.IO) {
+                                            db.orderDao().updateOrderStatus(order.id, "Completed")
+                                        }
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                                     shape = RoundedCornerShape(8.dp),
@@ -289,12 +345,70 @@ fun OrderManager(db: AppDatabase, email: String, isAdmin: Boolean) {
                                 }
                             }
                         }
-
                     }
                 }
             }
         }
     }
+
+    selectedOrder?.let { order ->
+        OrderDetailDialog(
+            order = order,
+            onDismiss = { selectedOrder = null }
+        )
+    }
+}
+
+@Composable
+fun OrderDetailDialog(
+    order: Order,
+    onDismiss: () -> Unit
+) {
+    val (statusText, statusColor) = mapStatus(order.status)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Chi tiết đơn hàng #${order.id}",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text("Trạng thái: $statusText", color = statusColor, fontWeight = FontWeight.Bold)
+                Text("Tổng tiền: ${formatPrice(order.totalPrice)}", fontWeight = FontWeight.Bold)
+                Text("Shop: ${order.shopEmail}")
+
+                if (order.userId != 0) {
+                    Text("Mã người mua: ${order.userId}")
+                }
+
+                Text("Sản phẩm đặt:")
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F8F8))
+                ) {
+                    Text(
+                        text = order.productDescription,
+                        modifier = Modifier.padding(12.dp),
+                        color = Color.DarkGray
+                    )
+                }
+
+                Text("Thời gian đặt: ${order.timestamp}")
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Đóng")
+            }
+        }
+    )
 }
 
 //hàm tạo sản phẩm với hình và mô tả
@@ -597,11 +711,11 @@ fun EditProductDialog(product: Product, db: AppDatabase, onDismiss: () -> Unit) 
 
 //trang thống kê
 @Composable
-fun AdminDashboardTab(db: AppDatabase, userRole: String) {
+fun AdminDashboardTab(db: AppDatabase, userRole: String,userEmail: String) {
     // --- Dữ liệu cho Shop ---
-    val totalRevenue by db.productDao().getTotalRevenue().collectAsState(initial = 0.0)
-    val pendingCount by db.productDao().getPendingOrderCount().collectAsState(initial = 0)
-    val shopProductCount by db.productDao().getTotalProductCount().collectAsState(initial = 0)
+    val totalRevenue by db.productDao().getTotalRevenueByShop(userEmail).collectAsState(initial = 0.0)
+    val pendingCount by db.productDao().getPendingOrderCountByShop(userEmail).collectAsState(initial = 0)
+    val shopProductCount by db.productDao().getProductCountByShop(userEmail).collectAsState(initial = 0)
 
     // --- Dữ liệu cho Admin ---
     val totalUsers by db.userDao().getTotalUserCount().collectAsState(initial = 0)
@@ -695,3 +809,4 @@ fun DashboardSmallCard(title: String, value: String, icon: androidx.compose.ui.g
         }
     }
 }
+

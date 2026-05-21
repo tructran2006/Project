@@ -46,4 +46,11 @@ interface OrderDao {
     // Xóa đơn hàng
     @Query("DELETE FROM order_table WHERE id = :orderId")
     suspend fun deleteOrder(orderId: Int)
+
+    @Query("""
+    SELECT COUNT(id) FROM order_table 
+    WHERE shopEmail = :shopEmail 
+    AND productDescription LIKE '%' || :productName || '%'
+""")
+    suspend fun countOrdersContainsProduct(shopEmail: String, productName: String): Int
 }
